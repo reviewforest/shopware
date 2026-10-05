@@ -1,0 +1,48 @@
+# Local test environment for the ReviewForest app.
+# - mongo:      local MongoDB (single-node replica set, needed for transactions) for the ReviewForest API
+# - sw67, sw66: Shopware 6.7 and 6.6 (dockware), app folder mounted as custom/apps/ReviewForest
+# The ReviewForest API runs on the host (see README): Shopware reaches it via host.docker.internal:3000,
+# the API reaches the shops via localhost:8067 / localhost:8066.
+name: reviewforest-shopware-dev
+
+services:
+  mongo:
+    # MongoDB 8 refuses to start on Linux kernels 6.19 to 7.0.13 (SERVER-121912), which Docker Desktop ships
+    # in autumn 2026. 7.0 is not affected and is enough for local tests.
+    image: mongo:7.0
+    command: ["mongod", "--replSet", "rs0", "--bind_ip_all"]
+    ports:
+      - "127.0.0.1:27019:27017"
+    healthcheck:
+      test: ["CMD-SHELL", "mongosh --quiet --eval \"try { rs.status().ok } catch (e) { rs.initiate({_id: 'rs0', members: [{_id: 0, host: 'localhost:27017'}]}).ok }\""]
+      interval: 5s
+      timeout: 10s
+      retries: 20
+    volumes:
+      - mongo-data:/data/db
+
+  sw67:
+    image: dockware/shopware:6.7-latest
+    ports:
+      - "127.0.0.1:8067:80"
+    environment:
+      SHOP_DOMAIN: localhost:8067
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ..:/mnt/reviewforest-app:ro
+
+  sw66:
+    image: dockware/shopware:6.6-latest
+    profiles: ["sw66"]
+    ports:
+      - "127.0.0.1:8066:80"
+    environment:
+      SHOP_DOMAIN: localhost:8066
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ..:/mnt/reviewforest-app:ro
+
+volumes:
+  mongo-data:

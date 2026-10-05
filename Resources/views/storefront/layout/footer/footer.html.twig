@@ -1,0 +1,11 @@
+{% sw_extends '@Storefront/storefront/layout/footer/footer.html.twig' %}
+
+{% block layout_footer_inner_container %}
+    {{ parent() }}
+    {% set rfFooterWidgetId = config('ReviewForest.config.footerWidgetId')|default('')|trim %}
+    {% if config('ReviewForest.config.widgetsEnabled') is not same as(false) and rfFooterWidgetId matches '/^[A-Za-z0-9-]{8,64}$/' %}
+        <div class="reviewforest-footer-widget container">
+            <div class="reviewforest-app-{{ rfFooterWidgetId }}"></div>
+        </div>
+    {% endif %}
+{% endblock %}

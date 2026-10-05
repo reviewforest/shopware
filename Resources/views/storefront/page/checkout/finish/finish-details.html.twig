@@ -1,0 +1,7 @@
+{% sw_extends '@Storefront/storefront/page/checkout/finish/finish-details.html.twig' %}
+
+{# The consent question is its own card right below the order confirmation card. #}
+{% block page_checkout_finish_data %}
+    {{ parent() }}
+    {% sw_include '@ReviewForest/storefront/reviewforest/finish-consent.html.twig' %}
+{% endblock %}

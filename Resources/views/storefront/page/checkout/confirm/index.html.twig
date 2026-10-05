@@ -1,0 +1,21 @@
+{% sw_extends '@Storefront/storefront/page/checkout/confirm/index.html.twig' %}
+
+{#
+    Optional consent checkbox (merchant setting "Checkbox in the checkout"). Never pre-checked and not
+    required. The answer is stored by the app's script on the order once the order confirmation page loads.
+#}
+{% block page_checkout_confirm_tos %}
+    {{ parent() }}
+    {% if config('ReviewForest.config.invitationsEnabled') and config('ReviewForest.config.consentMode') == 'checkout_checkbox' %}
+        <div class="reviewforest-consent-checkbox card checkout-card" data-reviewforest-checkbox>
+            <div class="card-body">
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" id="reviewforestConsentCheckbox" data-reviewforest-checkbox-input>
+                    <label class="form-check-label" for="reviewforestConsentCheckbox">
+                        {% sw_include '@ReviewForest/storefront/reviewforest/consent-text.html.twig' %}
+                    </label>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+{% endblock %}

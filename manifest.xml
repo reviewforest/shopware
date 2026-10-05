@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Local development manifest. bin/build.sh renders the release manifest from this file and
+    replaces the backend URL (http://host.docker.internal:3000) and removes the <secret>.
+    Keep the technical <name> in sync with APP_NAME in bin/build.sh.
+-->
+<manifest xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/shopware/shopware/trunk/src/Core/Framework/App/Manifest/Schema/manifest-2.0.xsd">
+    <meta>
+        <name>ReviewForest</name>
+        <label>ReviewForest: reviews that plant trees</label>
+        <label lang="de-DE">ReviewForest: Bewertungen, die Bäume pflanzen</label>
+        <description>Shows your ReviewForest widgets on every page and invites buyers who agreed to leave a review a few days after shipping. A tree is planted for every review.</description>
+        <description lang="de-DE">Zeigt Ihre ReviewForest-Widgets auf allen Seiten und lädt Käufer, die zugestimmt haben, einige Tage nach dem Versand zu einer Bewertung ein. Für jede Bewertung wird ein Baum gepflanzt.</description>
+        <author>ReviewForest GmbH</author>
+        <copyright>(c) ReviewForest GmbH</copyright>
+        <version>0.1.0</version>
+        <icon>Resources/config/plugin.png</icon>
+        <license>MIT</license>
+        <privacy>https://reviewforest.org/privacy</privacy>
+        <compatibility>~6.6.0 || ~6.7.0</compatibility>
+    </meta>
+    <setup>
+        <registrationUrl>http://host.docker.internal:3000/integrations/shopware/register</registrationUrl>
+        <secret>local-dev-app-secret</secret>
+    </setup>
+    <permissions>
+        <read>order</read>
+        <update>order</update>
+        <read>order_customer</read>
+        <read>order_delivery</read>
+        <read>order_transaction</read>
+        <read>order_line_item</read>
+        <read>customer</read>
+        <read>customer_group</read>
+        <read>sales_channel</read>
+        <read>sales_channel_domain</read>
+        <read>language</read>
+        <read>locale</read>
+        <read>currency</read>
+        <read>state_machine</read>
+        <read>state_machine_state</read>
+        <read>system_config</read>
+    </permissions>
+    <custom-fields>
+        <custom-field-set>
+            <name>reviewforest_order</name>
+            <label>ReviewForest</label>
+            <related-entities>
+                <order/>
+            </related-entities>
+            <fields>
+                <text name="reviewforest_consent">
+                    <label>Review invitation consent</label>
+                    <label lang="de-DE">Einwilligung Bewertungseinladung</label>
+                    <help-text>yes or no, set by the buyer on the order confirmation page or in the checkout.</help-text>
+                    <help-text lang="de-DE">yes oder no, gesetzt durch den Käufer auf der Bestellbestätigung oder im Checkout.</help-text>
+                    <position>1</position>
+                </text>
+                <datetime name="reviewforest_consent_at">
+                    <label>Consent given at</label>
+                    <label lang="de-DE">Einwilligung erteilt am</label>
+                    <position>2</position>
+                </datetime>
+                <text name="reviewforest_consent_source">
+                    <label>Consent source</label>
+                    <label lang="de-DE">Quelle der Einwilligung</label>
+                    <position>3</position>
+                </text>
+                <text name="reviewforest_consent_text">
+                    <label>Consent text version</label>
+                    <label lang="de-DE">Version des Einwilligungstexts</label>
+                    <position>4</position>
+                </text>
+                <text name="reviewforest_invitation_status">
+                    <label>Review invitation status</label>
+                    <label lang="de-DE">Status der Bewertungseinladung</label>
+                    <position>5</position>
+                </text>
+            </fields>
+        </custom-field-set>
+    </custom-fields>
+    <webhooks>
+        <webhook name="appInstalled" url="http://host.docker.internal:3000/integrations/shopware/webhooks" event="app.installed"/>
+        <webhook name="appUpdated" url="http://host.docker.internal:3000/integrations/shopware/webhooks" event="app.updated"/>
+        <webhook name="appActivated" url="http://host.docker.internal:3000/integrations/shopware/webhooks" event="app.activated"/>
+        <webhook name="appDeactivated" url="http://host.docker.internal:3000/integrations/shopware/webhooks" event="app.deactivated"/>
+        <webhook name="appDeleted" url="http://host.docker.internal:3000/integrations/shopware/webhooks" event="app.deleted"/>
+        <webhook name="orderShipped" url="http://host.docker.internal:3000/integrations/shopware/webhooks" event="state_enter.order_delivery.state.shipped"/>
+        <webhook name="orderPaid" url="http://host.docker.internal:3000/integrations/shopware/webhooks" event="state_enter.order_transaction.state.paid"/>
+        <webhook name="orderCompleted" url="http://host.docker.internal:3000/integrations/shopware/webhooks" event="state_enter.order.state.completed"/>
+        <webhook name="orderCancelled" url="http://host.docker.internal:3000/integrations/shopware/webhooks" event="state_enter.order.state.cancelled"/>
+        <webhook name="orderReturned" url="http://host.docker.internal:3000/integrations/shopware/webhooks" event="state_enter.order_delivery.state.returned"/>
+        <webhook name="orderRefunded" url="http://host.docker.internal:3000/integrations/shopware/webhooks" event="state_enter.order_transaction.state.refunded"/>
+    </webhooks>
+</manifest>

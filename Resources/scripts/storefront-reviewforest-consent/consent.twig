@@ -1,0 +1,64 @@
+{#
+    POST /storefront/script/reviewforest-consent
+    Stores the buyer's answer to the review invitation question on the order (custom fields).
+
+    Accepts form posts (finish page without JavaScript, answered with a redirect back to the finish page)
+    and JSON posts from the app's storefront JavaScript (answered with JSON).
+    Only the customer who placed the order (logged in or guest session) can answer, and only once.
+#}
+{% set rfOrderId = hook.request.orderId|default('') %}
+{% set rfConsent = hook.request.consent|default('') %}
+{% set rfSource = hook.request.source|default('') %}
+{% set rfTextVersion = hook.request.textVersion|default('') %}
+{% set rfRedirect = hook.request.redirect|default('') == '1' %}
+{% set rfCustomer = hook.salesChannelContext.customer %}
+
+{% if rfOrderId is empty or rfOrderId|length != 32 or rfConsent not in ['yes', 'no'] or rfSource not in ['finish_dialog', 'checkout_checkbox'] or not (rfTextVersion matches '/^(rf-(de|en)-\\d{4}-\\d{2}-v\\d+|custom-(de|en))$/') %}
+    {% do hook.setResponse(services.response.json({ 'success': false, 'error': 'invalid_request' }, 400)) %}
+    {% return %}
+{% endif %}
+
+{% if rfCustomer is null %}
+    {% do hook.setResponse(services.response.json({ 'success': false, 'error': 'not_logged_in' }, 403)) %}
+    {% return %}
+{% endif %}
+
+{% set rfCriteria = {
+    'ids': [rfOrderId],
+    'filter': [
+        { 'type': 'equals', 'field': 'orderCustomer.customerId', 'value': rfCustomer.id },
+        { 'type': 'equals', 'field': 'salesChannelId', 'value': hook.salesChannelContext.salesChannelId }
+    ]
+} %}
+{% set rfOrder = services.repository.search('order', rfCriteria).first %}
+
+{% if rfOrder is null %}
+    {% do hook.setResponse(services.response.json({ 'success': false, 'error': 'order_not_found' }, 404)) %}
+    {% return %}
+{% endif %}
+
+{% set rfExisting = (rfOrder.customFields ?? {})['reviewforest_consent'] ?? null %}
+
+{% if rfExisting is null %}
+    {# A custom text can change later in the settings, so the exact wording is stored with the order. #}
+    {% if rfTextVersion starts with 'custom' %}
+        {% set rfStoredText = rfTextVersion ~ ': ' ~ (rfTextVersion == 'custom-de' ? services.config.app('consentTextDe') : services.config.app('consentTextEn'))|default('') %}
+    {% else %}
+        {% set rfStoredText = rfTextVersion %}
+    {% endif %}
+    {% do services.writer.upsert('order', [{
+        'id': rfOrderId,
+        'customFields': {
+            'reviewforest_consent': rfConsent,
+            'reviewforest_consent_at': 'now'|date('Y-m-d\\TH:i:sP', 'UTC'),
+            'reviewforest_consent_source': rfSource,
+            'reviewforest_consent_text': rfStoredText|slice(0, 2000)
+        }
+    }]) %}
+{% endif %}
+
+{% if rfRedirect %}
+    {% do hook.setResponse(services.response.redirect('frontend.checkout.finish.page', { 'orderId': rfOrderId })) %}
+{% else %}
+    {% do hook.setResponse(services.response.json({ 'success': true, 'consent': rfExisting ?? rfConsent })) %}
+{% endif %}

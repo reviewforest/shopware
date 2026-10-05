@@ -1,0 +1,56 @@
+{#
+    Consent on the order confirmation page.
+    - Mode "finish_dialog": a question with two equal buttons. Works without JavaScript (plain form post,
+      the script endpoint redirects back here); with JavaScript the answer is sent in the background.
+    - Mode "checkout_checkbox": nothing is shown; the JavaScript sends the checkbox answer that was given
+      on the confirm page for this order.
+    The answer is written to the order custom fields by Resources/scripts/storefront-reviewforest-consent.
+#}
+{% set rfOrder = page.order %}
+{% if rfOrder and config('ReviewForest.config.invitationsEnabled') %}
+    {% set rfMode = config('ReviewForest.config.consentMode')|default('finish_dialog') %}
+    {% set rfAnswer = (rfOrder.customFields ?? {})['reviewforest_consent'] ?? null %}
+    {% if context.languageInfo is defined and context.languageInfo %}
+        {% set rfLocale = context.languageInfo.localeCode %}
+    {% elseif page.header.activeLanguage.translationCode.code is defined %}
+        {% set rfLocale = page.header.activeLanguage.translationCode.code %}
+    {% else %}
+        {% set rfLocale = app.request.locale|default('de-DE') %}
+    {% endif %}
+    {% set rfDe = rfLocale|lower starts with 'de' %}
+    {% set rfEndpoint = path('frontend.script_endpoint', { hook: 'reviewforest-consent' }) %}
+    {% set rfThanksYes = rfDe ? 'Danke! Sie erhalten einige Tage nach dem Versand eine E-Mail mit der Bitte um Ihre Bewertung.' : 'Thank you! You will receive an email asking for your review a few days after shipping.' %}
+    {% set rfThanksNo = rfDe ? 'Alles klar, wir fragen nicht nach einer Bewertung.' : 'All right, we will not ask you for a review.' %}
+
+    {# In checkbox mode the card stays hidden until the script has stored the checkbox answer. #}
+    <div class="reviewforest-consent card checkout-card mt-4"
+         {% if rfMode == 'checkout_checkbox' and rfAnswer is null %}hidden{% endif %}
+         data-reviewforest-consent
+         data-thanks-yes="{{ rfThanksYes }}"
+         data-thanks-no="{{ rfThanksNo }}">
+        <div class="card-body">
+            {% if rfAnswer == 'yes' %}
+                <p class="reviewforest-consent-result mb-0">{{ rfThanksYes }}</p>
+            {% elseif rfAnswer == 'no' %}
+                <p class="reviewforest-consent-result mb-0">{{ rfThanksNo }}</p>
+            {% elseif rfMode == 'checkout_checkbox' %}
+                <form method="post" action="{{ rfEndpoint }}" hidden data-reviewforest-checkbox-submit>
+                    <input type="hidden" name="orderId" value="{{ rfOrder.id }}">
+                    <input type="hidden" name="source" value="checkout_checkbox">
+                </form>
+            {% else %}
+                <form method="post" action="{{ rfEndpoint }}" data-reviewforest-consent-form>
+                    <input type="hidden" name="orderId" value="{{ rfOrder.id }}">
+                    <input type="hidden" name="source" value="finish_dialog">
+                    <input type="hidden" name="redirect" value="1">
+                    <div class="card-title">{{ rfDe ? 'Dürfen wir Sie später um eine Bewertung bitten?' : 'May we ask you for a review later?' }}</div>
+                    <p>{% sw_include '@ReviewForest/storefront/reviewforest/consent-text.html.twig' %}</p>
+                    <div class="reviewforest-consent-actions d-flex flex-wrap gap-2">
+                        <button type="submit" name="consent" value="yes" class="btn btn-outline-primary">{{ rfDe ? 'Ja, gerne' : 'Yes, please' }}</button>
+                        <button type="submit" name="consent" value="no" class="btn btn-outline-primary">{{ rfDe ? 'Nein, danke' : 'No, thanks' }}</button>
+                    </div>
+                </form>
+            {% endif %}
+        </div>
+    </div>
+{% endif %}

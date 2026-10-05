@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow-extensions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                 xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/shopware/shopware/trunk/src/Core/Framework/App/Flow/Schema/flow-1.0.xsd">
+    <flow-actions>
+        <!--
+            Lets merchants schedule the review invitation from their own Flow Builder rules, for example only
+            for certain products or sales channels. Consent of the buyer is still required.
+        -->
+        <flow-action>
+            <meta>
+                <name>reviewforest.schedule.invitation</name>
+                <badge>ReviewForest</badge>
+                <label>Schedule review invitation</label>
+                <label lang="de-DE">Bewertungseinladung einplanen</label>
+                <description>Sends a ReviewForest review invitation after the delay, if the buyer agreed.</description>
+                <description lang="de-DE">Verschickt nach der Wartezeit eine ReviewForest-Bewertungseinladung, wenn der Käufer zugestimmt hat.</description>
+                <url>http://host.docker.internal:3000/integrations/shopware/webhooks</url>
+                <sw-icon>regular-star</sw-icon>
+                <requirements>orderAware</requirements>
+            </meta>
+            <headers>
+                <parameter type="string" name="content-type" value="application/json"/>
+            </headers>
+            <parameters>
+                <parameter type="string" name="orderId" value="{{ order.id }}"/>
+                <parameter type="string" name="delayDays" value="{{ delayDays }}"/>
+            </parameters>
+            <config>
+                <!-- Text, not int: Shopware renders every flow action config value as a template string. -->
+                <input-field type="text">
+                    <name>delayDays</name>
+                    <label>Delay in days (1 to 60)</label>
+                    <label lang="de-DE">Wartezeit in Tagen (1 bis 60)</label>
+                    <defaultValue>7</defaultValue>
+                    <required>true</required>
+                </input-field>
+            </config>
+        </flow-action>
+    </flow-actions>
+</flow-extensions>

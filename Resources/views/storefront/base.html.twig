@@ -1,0 +1,7 @@
+{% sw_extends '@Storefront/storefront/base.html.twig' %}
+
+{# Global widgets: one loader script plus one placeholder per configured widget, on every storefront page. #}
+{% block base_body_script %}
+    {{ parent() }}
+    {% sw_include '@ReviewForest/storefront/reviewforest/widgets.html.twig' %}
+{% endblock %}
