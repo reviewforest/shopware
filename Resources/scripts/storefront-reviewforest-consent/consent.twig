@@ -9,11 +9,10 @@
 {% set rfOrderId = hook.request.orderId|default('') %}
 {% set rfConsent = hook.request.consent|default('') %}
 {% set rfSource = hook.request.source|default('') %}
-{% set rfTextVersion = hook.request.textVersion|default('') %}
 {% set rfRedirect = hook.request.redirect|default('') == '1' %}
 {% set rfCustomer = hook.salesChannelContext.customer %}
 
-{% if rfOrderId is empty or rfOrderId|length != 32 or rfConsent not in ['yes', 'no'] or rfSource not in ['finish_dialog', 'checkout_checkbox'] or not (rfTextVersion matches '/^(rf-(de|en)-\\d{4}-\\d{2}-v\\d+|custom-(de|en))$/') %}
+{% if rfOrderId is empty or rfOrderId|length != 32 or rfConsent not in ['yes', 'no'] or rfSource not in ['finish_dialog', 'checkout_checkbox'] %}
     {% do hook.setResponse(services.response.json({ 'success': false, 'error': 'invalid_request' }, 400)) %}
     {% return %}
 {% endif %}
@@ -40,11 +39,18 @@
 {% set rfExisting = (rfOrder.customFields ?? {})['reviewforest_consent'] ?? null %}
 
 {% if rfExisting is null %}
-    {# A custom text can change later in the settings, so the exact wording is stored with the order. #}
-    {% if rfTextVersion starts with 'custom' %}
-        {% set rfStoredText = rfTextVersion ~ ': ' ~ (rfTextVersion == 'custom-de' ? services.config.app('consentTextDe') : services.config.app('consentTextEn'))|default('') %}
+    {#
+        The text shown to the buyer is derived here, on the server, from the buyer's language and the current
+        settings, never taken from the request. Keep the version IDs in sync with consent-text.html.twig.
+        A custom text can change later in the settings, so its exact wording is stored with the order.
+    #}
+    {% set rfLanguage = services.repository.search('language', { 'ids': [hook.salesChannelContext.languageId], 'associations': { 'locale': {} } }).first %}
+    {% set rfDe = (rfLanguage.locale.code ?? 'de-DE')|lower starts with 'de' %}
+    {% set rfCustom = (rfDe ? services.config.app('consentTextDe') : services.config.app('consentTextEn'))|default('')|trim %}
+    {% if rfCustom is not empty %}
+        {% set rfStoredText = (rfDe ? 'custom-de: ' : 'custom-en: ') ~ rfCustom %}
     {% else %}
-        {% set rfStoredText = rfTextVersion %}
+        {% set rfStoredText = rfDe ? 'rf-de-2026-10-v1' : 'rf-en-2026-10-v1' %}
     {% endif %}
     {% do services.writer.upsert('order', [{
         'id': rfOrderId,

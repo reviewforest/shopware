@@ -3,7 +3,11 @@
     configuration can never inject markup. The footer widget is rendered by layout/footer/footer.html.twig.
 #}
 {% set rfWidgetIds = [] %}
-{% if config('ReviewForest.config.widgetsEnabled') is not same as(false) %}
+{# No third-party widget script on checkout and account pages unless the merchant enables it; the cart counts as a shop page. #}
+{% set rfRoute = app.request.attributes.get('_route')|default('') %}
+{% set rfSensitivePage = (rfRoute starts with 'frontend.checkout.' and rfRoute != 'frontend.checkout.cart.page') or rfRoute starts with 'frontend.account.' %}
+{% set rfWidgetPageAllowed = not rfSensitivePage or config('ReviewForest.config.widgetsOnCheckoutAndAccount') %}
+{% if config('ReviewForest.config.widgetsEnabled') is not same as(false) and rfWidgetPageAllowed %}
     {% set rfCandidates = [config('ReviewForest.config.floatingWidgetId')|default('')]|merge(config('ReviewForest.config.additionalWidgetIds')|default('')|split(',')) %}
     {% for rfCandidate in rfCandidates %}
         {% set rfId = rfCandidate|trim %}

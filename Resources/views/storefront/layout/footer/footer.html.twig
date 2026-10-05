@@ -2,8 +2,12 @@
 
 {% block layout_footer_inner_container %}
     {{ parent() }}
+    {# No third-party widget script on checkout and account pages unless the merchant enables it; the cart counts as a shop page. #}
+    {% set rfRoute = app.request.attributes.get('_route')|default('') %}
+    {% set rfSensitivePage = (rfRoute starts with 'frontend.checkout.' and rfRoute != 'frontend.checkout.cart.page') or rfRoute starts with 'frontend.account.' %}
+    {% set rfWidgetPageAllowed = not rfSensitivePage or config('ReviewForest.config.widgetsOnCheckoutAndAccount') %}
     {% set rfFooterWidgetId = config('ReviewForest.config.footerWidgetId')|default('')|trim %}
-    {% if config('ReviewForest.config.widgetsEnabled') is not same as(false) and rfFooterWidgetId matches '/^[A-Za-z0-9-]{8,64}$/' %}
+    {% if config('ReviewForest.config.widgetsEnabled') is not same as(false) and rfWidgetPageAllowed and rfFooterWidgetId matches '/^[A-Za-z0-9-]{8,64}$/' %}
         <div class="reviewforest-footer-widget container">
             <div class="reviewforest-app-{{ rfFooterWidgetId }}"></div>
         </div>

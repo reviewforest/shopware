@@ -1,7 +1,8 @@
 {#
     Renders the consent text in the buyer's language plus its version ID.
     Default texts follow the legal review of 2026-10-01 (integrations/shopware/research/04). Bump the
-    version ID whenever the wording changes; the ID is stored with every consent on the order.
+    version ID here AND in Resources/scripts/storefront-reviewforest-consent/consent.twig whenever the
+    wording changes; the script stores the ID with every consent on the order.
 #}
 {# Language: 6.7 has it on the sales channel context, 6.6 on the page header. #}
 {% if context.languageInfo is defined and context.languageInfo %}
@@ -16,13 +17,11 @@
 {% set rfCustom = (rfDe ? config('ReviewForest.config.consentTextDe') : config('ReviewForest.config.consentTextEn'))|default('')|trim %}
 {% if rfCustom is not empty %}
     {% set rfText = rfCustom %}
-    {% set rfTextVersion = rfDe ? 'custom-de' : 'custom-en' %}
 {% elseif rfDe %}
     {% set rfText = 'Ja, ich möchte einige Tage nach dem Versand einmalig eine E-Mail von {shop} mit der Bitte um eine Bewertung erhalten. Den Versand übernimmt ReviewForest im Auftrag von {shop}. Für jede Bewertung wird ein Baum gepflanzt, unabhängig davon, wie Sie bewerten. Ich kann diese Einwilligung jederzeit widerrufen, zum Beispiel über den Link in der E-Mail.' %}
-    {% set rfTextVersion = 'rf-de-2026-10-v1' %}
+    {# version rf-de-2026-10-v1 #}
 {% else %}
     {% set rfText = 'Yes, I would like to receive one email from {shop} a few days after shipping, asking me for a review. ReviewForest sends it on behalf of {shop}. A tree is planted for every review, no matter how you rate. I can withdraw this consent at any time, for example via the link in the email.' %}
-    {% set rfTextVersion = 'rf-en-2026-10-v1' %}
+    {# version rf-en-2026-10-v1 #}
 {% endif %}
-<input type="hidden" name="textVersion" value="{{ rfTextVersion }}" data-reviewforest-text-version>
 <span class="reviewforest-consent-text">{{ rfText|replace({'{shop}': rfShop is not empty ? rfShop : (rfDe ? 'diesem Shop' : 'this shop')}) }}</span>

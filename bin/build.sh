@@ -7,60 +7,91 @@
 #
 # Environment:
 #   APP_NAME              technical name, must start with the Shopware manufacturer prefix (default ReviewForest)
-#   API_URL               backend base URL (default https://api.reviewforest.org)
-#   SHOPWARE_APP_SECRET   only for "zip"
+#   API_URL               backend base URL, public https (default https://api.reviewforest.org)
+#   SHOPWARE_APP_SECRET   only for "zip"; read from the environment, never from the command line
+#
+# The repository manifest is the local development manifest (host.docker.internal, dev secret). The build
+# fails closed: it aborts if any development URL or the development secret is left in the package.
 set -euo pipefail
 
 MODE="${1:-zip}"
-APP_NAME="${APP_NAME:-ReviewForest}"
-API_URL="${API_URL:-https://api.reviewforest.org}"
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-VERSION="$(sed -n 's:.*<version>\(.*\)</version>.*:\1:p' "$ROOT/manifest.xml" | head -1)"
-OUT="$ROOT/dist"
-STAGE="$(mktemp -d)/$APP_NAME"
-
 case "$MODE" in
-  zip)
-    : "${SHOPWARE_APP_SECRET:?SHOPWARE_APP_SECRET is required for the self-hosted ZIP}"
-    ;;
+  zip) : "${SHOPWARE_APP_SECRET:?SHOPWARE_APP_SECRET is required for the self-hosted ZIP}" ;;
   store) ;;
   *) echo "usage: bin/build.sh zip|store" >&2; exit 1 ;;
 esac
 
-mkdir -p "$STAGE" "$OUT"
+export BUILD_MODE="$MODE"
+export APP_NAME="${APP_NAME:-ReviewForest}"
+export API_URL="${API_URL:-https://api.reviewforest.org}"
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+STAGE_PARENT="$(mktemp -d)"
+STAGE="$STAGE_PARENT/$APP_NAME"
+trap 'rm -rf "$STAGE_PARENT"' EXIT
+
+mkdir -p "$STAGE" "$ROOT/dist"
 cp -R "$ROOT/Resources" "$STAGE/"
 cp "$ROOT/manifest.xml" "$ROOT/LICENSE" "$ROOT/CHANGELOG.md" "$STAGE/"
 [ -f "$ROOT/README.md" ] && cp "$ROOT/README.md" "$STAGE/"
 
-# Backend URL in the flow action as well.
-sed -i.bak "s#http://host.docker.internal:3000#${API_URL%/}#g" "$STAGE/Resources/flow.xml" && rm -f "$STAGE/Resources/flow.xml.bak"
+python3 - "$STAGE" <<'PY'
+import os, re, sys
+from pathlib import Path
+from urllib.parse import urlparse
+from xml.sax.saxutils import escape
 
-python3 - "$STAGE/manifest.xml" "$MODE" "$APP_NAME" "$API_URL" "${SHOPWARE_APP_SECRET:-}" <<'PY'
-import re, sys
-path, mode, app_name, api_url, secret = sys.argv[1:]
-s = open(path, encoding='utf-8').read()
-s = re.sub(r'<!--.*?-->\s*', '', s, count=1, flags=re.S)  # drop the dev comment
-s = s.replace('http://host.docker.internal:3000', api_url.rstrip('/'))
-s = re.sub(r'<name>ReviewForest</name>', f'<name>{app_name}</name>', s, count=1)
-if mode == 'store':
-    s = re.sub(r'\s*<secret>.*?</secret>', '', s)
-else:
-    s = re.sub(r'<secret>.*?</secret>', f'<secret>{secret}</secret>', s)
-assert 'host.docker.internal' not in s
-open(path, 'w', encoding='utf-8').write(s)
+stage = Path(sys.argv[1])
+mode, app_name, api_url = os.environ['BUILD_MODE'], os.environ['APP_NAME'], os.environ['API_URL'].rstrip('/')
+secret = os.environ.get('SHOPWARE_APP_SECRET', '')
+dev_url, dev_secret = 'http://host.docker.internal:3000', 'local-dev-app-secret'
+
+parsed = urlparse(api_url)
+if parsed.scheme != 'https' or not parsed.hostname or parsed.hostname in ('localhost', 'host.docker.internal'):
+    sys.exit(f'API_URL must be a public https URL, got {api_url}')
+if not re.fullmatch(r'[A-Z][A-Za-z0-9]{2,63}', app_name):
+    sys.exit(f'APP_NAME must be a valid technical name, got {app_name}')
+if mode == 'zip' and (len(secret) < 32 or secret == dev_secret):
+    sys.exit('SHOPWARE_APP_SECRET must be the production app secret (at least 32 characters)')
+
+kebab = re.sub(r'([a-z0-9])([A-Z])', r'\1-\2', app_name).lower()
+
+for path in stage.rglob('*'):
+    if not path.is_file() or path.suffix not in ('.xml', '.twig', '.js', '.md'):
+        continue
+    text = path.read_text(encoding='utf-8')
+    original = text
+    text = text.replace(dev_url, api_url)
+    if app_name != 'ReviewForest':
+        text = text.replace('ReviewForest.config', f'{app_name}.config').replace('@ReviewForest/', f'@{app_name}/')
+    if path.name == 'manifest.xml' and path.parent == stage:
+        text = re.sub(r'<!--.*?-->\s*', '', text, count=1, flags=re.S)  # drop the development comment
+        text = re.sub(r'<name>ReviewForest</name>', f'<name>{escape(app_name)}</name>', text, count=1)
+        if mode == 'store':
+            text = re.sub(r'\s*<secret>.*?</secret>', '', text)
+        else:
+            text = re.sub(r'<secret>.*?</secret>', lambda _: f'<secret>{escape(secret)}</secret>', text)
+    if text != original:
+        path.write_text(text, encoding='utf-8')
+
+js_dir = stage / 'Resources/app/storefront/dist/storefront/js'
+if app_name != 'ReviewForest':
+    (js_dir / 'review-forest').rename(js_dir / kebab)
+    (js_dir / kebab / 'review-forest.js').rename(js_dir / kebab / f'{kebab}.js')
+
+# Fail closed: nothing from the development setup may remain in the package.
+leftovers = [str(p.relative_to(stage)) for p in stage.rglob('*') if p.is_file() and p.suffix != '.png'
+             and any(marker in p.read_text(encoding='utf-8', errors='ignore') for marker in ('host.docker.internal', dev_secret))]
+if leftovers:
+    sys.exit(f'Development URL or secret left in: {", ".join(leftovers)}')
+manifest = (stage / 'manifest.xml').read_text(encoding='utf-8')
+if mode == 'store' and '<secret>' in manifest:
+    sys.exit('Store build must not contain a secret')
+if re.search(r'url="http://|<registrationUrl>http://|<url>http://', manifest + (stage / 'Resources/flow.xml').read_text(encoding='utf-8')):
+    sys.exit('Release URLs must use https')
 PY
 
-# Templates and scripts read the configuration under the technical name.
-if [ "$APP_NAME" != "ReviewForest" ]; then
-  grep -rl "ReviewForest.config" "$STAGE/Resources" | xargs sed -i.bak "s/ReviewForest\.config/${APP_NAME}.config/g"
-  grep -rl "@ReviewForest/" "$STAGE/Resources" | xargs sed -i.bak "s#@ReviewForest/#@${APP_NAME}/#g"
-  find "$STAGE" -name '*.bak' -delete
-  KEBAB="$(echo "$APP_NAME" | sed -E 's/([a-z0-9])([A-Z])/\1-\2/g' | tr '[:upper:]' '[:lower:]')"
-  mv "$STAGE/Resources/app/storefront/dist/storefront/js/review-forest" "$STAGE/Resources/app/storefront/dist/storefront/js/$KEBAB"
-  mv "$STAGE/Resources/app/storefront/dist/storefront/js/$KEBAB/review-forest.js" "$STAGE/Resources/app/storefront/dist/storefront/js/$KEBAB/$KEBAB.js"
-fi
-
-ZIP="$OUT/${APP_NAME}-${VERSION}-${MODE}.zip"
+VERSION="$(sed -n 's:.*<version>\(.*\)</version>.*:\1:p' "$STAGE/manifest.xml" | head -1)"
+ZIP="$ROOT/dist/${APP_NAME}-${VERSION}-${MODE}.zip"
 rm -f "$ZIP"
-(cd "$(dirname "$STAGE")" && zip -qr "$ZIP" "$APP_NAME" -x '*.DS_Store')
+(cd "$STAGE_PARENT" && zip -qr "$ZIP" "$APP_NAME" -x '*.DS_Store')
 echo "$ZIP"

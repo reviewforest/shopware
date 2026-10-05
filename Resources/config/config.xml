@@ -30,6 +30,14 @@
             <label lang="de-DE">Widgets anzeigen</label>
             <defaultValue>true</defaultValue>
         </input-field>
+        <input-field type="bool">
+            <name>widgetsOnCheckoutAndAccount</name>
+            <label>Also show widgets in the checkout and the customer account</label>
+            <label lang="de-DE">Widgets auch im Checkout und im Kundenkonto anzeigen</label>
+            <defaultValue>false</defaultValue>
+            <helpText>Off by default, so no external script runs while buyers enter their data. The cart always shows widgets.</helpText>
+            <helpText lang="de-DE">Standardmäßig aus, damit kein externes Skript läuft, während Käufer ihre Daten eingeben. Im Warenkorb erscheinen Widgets immer.</helpText>
+        </input-field>
         <input-field type="text">
             <name>floatingWidgetId</name>
             <label>Floating badge: widget ID</label>
