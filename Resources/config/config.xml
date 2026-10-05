@@ -163,23 +163,5 @@
         </component>
     </card>
 
-    <card>
-        <title>Tree per order</title>
-        <title lang="de-DE">Baum pro Bestellung</title>
-        <input-field type="bool">
-            <name>treePerOrderEnabled</name>
-            <label>Plant a tree for every order</label>
-            <label lang="de-DE">Für jede Bestellung einen Baum pflanzen</label>
-            <defaultValue>false</defaultValue>
-            <helpText>Billed like review trees at your plan's tree price on the monthly invoice.</helpText>
-            <helpText lang="de-DE">Wird wie Bewertungsbäume zum Baumpreis Ihres Tarifs über die Monatsrechnung abgerechnet.</helpText>
-        </input-field>
-        <input-field type="int">
-            <name>treePerOrderMonthlyLimit</name>
-            <label>Maximum trees per month</label>
-            <label lang="de-DE">Höchstens so viele Bäume pro Monat</label>
-            <defaultValue>100</defaultValue>
-            <min>1</min>
-        </input-field>
-    </card>
+    <!-- "Tree per order" follows in a later version (RF-12187), once it is billed through the monthly usage. -->
 </config>
