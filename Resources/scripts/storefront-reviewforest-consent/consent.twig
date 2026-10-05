@@ -59,8 +59,9 @@
         A custom text can change later in the settings, so its exact wording, with the shop name filled in,
         is stored with the order.
     #}
-    {% set rfLanguage = services.repository.search('language', { 'ids': [hook.salesChannelContext.languageId], 'associations': { 'locale': {} } }).first %}
-    {% set rfDe = (rfLanguage.locale.code ?? 'de-DE')|lower starts with 'de' %}
+    {# Same rule as the storefront: the translation code wins over the locale (Shopware language resolution). #}
+    {% set rfLanguage = services.repository.search('language', { 'ids': [hook.salesChannelContext.languageId], 'associations': { 'locale': {}, 'translationCode': {} } }).first %}
+    {% set rfDe = (rfLanguage.translationCode.code ?? rfLanguage.locale.code ?? 'de-DE')|lower starts with 'de' %}
     {% set rfCustom = (rfDe ? services.config.app('consentTextDe') : services.config.app('consentTextEn'))|default('')|trim %}
     {% if rfCustom is not empty %}
         {% set rfShop = services.config.get('core.basicInformation.shopName', hook.salesChannelContext.salesChannelId)|default('')|trim %}

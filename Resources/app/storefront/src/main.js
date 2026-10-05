@@ -34,16 +34,59 @@
         });
     }
 
-    function showResult(container, consent) {
-        var text = consent === 'yes' ? container.getAttribute('data-thanks-yes') : container.getAttribute('data-thanks-no');
+    function clear(element) {
+        while (element.firstChild) {
+            element.removeChild(element.firstChild);
+        }
+    }
+
+    function hiddenInput(name, value) {
+        var input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = name;
+        input.value = value;
+        return input;
+    }
+
+    /**
+     * Replaces the question with the answer. After a yes the buyer gets the withdraw button right away
+     * (orderId and deepLinkCode come from the form that was just answered).
+     */
+    function showResult(container, consent, answeredForm, withdrawn) {
         var body = container.querySelector('.card-body') || container;
+        var text = withdrawn
+            ? container.getAttribute('data-withdrawn')
+            : consent === 'yes'
+              ? container.getAttribute('data-thanks-yes')
+              : container.getAttribute('data-thanks-no');
         var result = document.createElement('p');
         result.className = 'reviewforest-consent-result mb-0';
         result.textContent = text;
-        while (body.firstChild) {
-            body.removeChild(body.firstChild);
+        clear(body);
+
+        if (consent !== 'yes' || !answeredForm || !answeredForm.elements.deepLinkCode) {
+            body.appendChild(result);
+            return;
         }
-        body.appendChild(result);
+        var form = document.createElement('form');
+        form.method = 'post';
+        form.action = answeredForm.getAttribute('action');
+        form.className = 'd-flex flex-wrap align-items-center gap-2';
+        form.setAttribute('data-reviewforest-consent-form', '');
+        form.appendChild(hiddenInput('orderId', answeredForm.elements.orderId.value));
+        form.appendChild(hiddenInput('deepLinkCode', answeredForm.elements.deepLinkCode.value));
+        form.appendChild(hiddenInput('source', 'withdrawal'));
+        form.appendChild(hiddenInput('redirect', '1'));
+        form.appendChild(result);
+        var button = document.createElement('button');
+        button.type = 'submit';
+        button.name = 'consent';
+        button.value = 'no';
+        button.className = 'btn btn-link p-0';
+        button.textContent = container.getAttribute('data-withdraw-label');
+        form.appendChild(button);
+        body.appendChild(form);
+        initFinishDialog(form);
     }
 
     /* Finish page, mode "question": send the answer in the background, fall back to a normal post. */
@@ -67,7 +110,8 @@
                 consent: consent,
             })
                 .then(function (result) {
-                    showResult(container, result.consent || consent);
+                    var answer = result.consent || consent;
+                    showResult(container, answer, form, form.elements.source.value === 'withdrawal' && answer === 'no');
                 })
                 .catch(function () {
                     // Let the server handle it the classic way. form.submit() drops the clicked button,
@@ -154,7 +198,7 @@
                 store.removeItem(STORAGE_KEY);
                 if ((result.consent || saved.consent) === 'yes' && container) {
                     container.hidden = false;
-                    showResult(container, 'yes');
+                    showResult(container, 'yes', form, false);
                 }
             })
             .catch(function () {

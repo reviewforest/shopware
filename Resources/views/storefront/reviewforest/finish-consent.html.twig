@@ -34,7 +34,9 @@
          data-order-created="{{ rfOrder.createdAt|date('U') }}"
          data-order-total="{{ rfOrder.amountTotal }}"
          data-thanks-yes="{{ rfThanksYes }}"
-         data-thanks-no="{{ rfThanksNo }}">
+         data-thanks-no="{{ rfThanksNo }}"
+         data-withdrawn="{{ rfDe ? 'Sie haben Ihre Einwilligung widerrufen. Wir fragen nicht nach einer Bewertung.' : 'You withdrew your consent. We will not ask you for a review.' }}"
+         data-withdraw-label="{{ rfDe ? 'Einwilligung widerrufen' : 'Withdraw consent' }}">
         <div class="card-body">
             {% if rfAnswer == 'yes' %}
                 <form method="post" action="{{ rfEndpoint }}" class="d-flex flex-wrap align-items-center gap-2" data-reviewforest-consent-form>
