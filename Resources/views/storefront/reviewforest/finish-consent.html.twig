@@ -23,7 +23,7 @@
     {% set rfThanksNo = rfDe ? 'Alles klar, wir fragen nicht nach einer Bewertung.' : 'All right, we will not ask you for a review.' %}
 
     {# In checkbox mode the card stays hidden until the script has stored the checkbox answer. #}
-    <div class="reviewforest-consent card checkout-card mt-4"
+    <div class="reviewforest-consent card checkout-card mt-4 mb-4"
          {% if rfMode == 'checkout_checkbox' and rfAnswer is null %}hidden{% endif %}
          data-reviewforest-consent
          data-thanks-yes="{{ rfThanksYes }}"
