@@ -4,51 +4,67 @@
 
     Accepts form posts (finish page without JavaScript, answered with a redirect back to the finish page)
     and JSON posts from the app's storefront JavaScript (answered with JSON).
-    Only the customer who placed the order (logged in or guest session) can answer, and only once.
+
+    Who may answer: every request must carry the order's deep link code, the secret Shopware itself uses for
+    guest order links. It is only rendered on the buyer's own order confirmation page, so it proves the answer
+    comes from that buyer and works as a request token against cross-site posts. A logged-in customer must
+    additionally own the order; a logged-out guest (shops that log guests out after the checkout) can only
+    answer within two hours after the order.
+
+    What may change: an unanswered order gets yes or no; a yes can be withdrawn (becomes no, with the time of
+    withdrawal); a no is final.
 #}
 {% set rfOrderId = hook.request.orderId|default('') %}
+{% set rfDeepLinkCode = hook.request.deepLinkCode|default('') %}
 {% set rfConsent = hook.request.consent|default('') %}
 {% set rfSource = hook.request.source|default('') %}
 {% set rfRedirect = hook.request.redirect|default('') == '1' %}
 {% set rfCustomer = hook.salesChannelContext.customer %}
+{% set rfNow = 'now'|date('U') %}
 
-{% if rfOrderId is empty or rfOrderId|length != 32 or rfConsent not in ['yes', 'no'] or rfSource not in ['finish_dialog', 'checkout_checkbox'] %}
+{% if rfOrderId is empty or rfOrderId|length != 32 or rfDeepLinkCode|length < 20 or rfConsent not in ['yes', 'no'] or rfSource not in ['finish_dialog', 'checkout_checkbox', 'withdrawal'] or (rfSource == 'withdrawal' and rfConsent != 'no') %}
     {% do hook.setResponse(services.response.json({ 'success': false, 'error': 'invalid_request' }, 400)) %}
     {% return %}
 {% endif %}
 
-{% if rfCustomer is null %}
-    {% do hook.setResponse(services.response.json({ 'success': false, 'error': 'not_logged_in' }, 403)) %}
-    {% return %}
+{% set rfFilter = [
+    { 'type': 'equals', 'field': 'deepLinkCode', 'value': rfDeepLinkCode },
+    { 'type': 'equals', 'field': 'salesChannelId', 'value': hook.salesChannelContext.salesChannelId }
+] %}
+{% if rfCustomer is not null %}
+    {% set rfFilter = rfFilter|merge([{ 'type': 'equals', 'field': 'orderCustomer.customerId', 'value': rfCustomer.id }]) %}
 {% endif %}
-
-{% set rfCriteria = {
-    'ids': [rfOrderId],
-    'filter': [
-        { 'type': 'equals', 'field': 'orderCustomer.customerId', 'value': rfCustomer.id },
-        { 'type': 'equals', 'field': 'salesChannelId', 'value': hook.salesChannelContext.salesChannelId }
-    ]
-} %}
-{% set rfOrder = services.repository.search('order', rfCriteria).first %}
+{% set rfOrder = services.repository.search('order', { 'ids': [rfOrderId], 'filter': rfFilter }).first %}
 
 {% if rfOrder is null %}
     {% do hook.setResponse(services.response.json({ 'success': false, 'error': 'order_not_found' }, 404)) %}
     {% return %}
 {% endif %}
 
-{% set rfExisting = (rfOrder.customFields ?? {})['reviewforest_consent'] ?? null %}
+{# Answers that do not come from a logged-in owner, and checkbox answers carried over from the checkout,
+   only count for an order placed within the last two hours. #}
+{% set rfOrderAge = rfNow - (rfOrder.createdAt|date('U')) %}
+{% if (rfCustomer is null or rfSource == 'checkout_checkbox') and rfOrderAge > 7200 %}
+    {% do hook.setResponse(services.response.json({ 'success': false, 'error': 'answer_too_late' }, 403)) %}
+    {% return %}
+{% endif %}
 
-{% if rfExisting is null %}
+{% set rfExisting = (rfOrder.customFields ?? {})['reviewforest_consent'] ?? null %}
+{% set rfNowIso = 'now'|date('Y-m-d\\TH:i:sP', 'UTC') %}
+
+{% if rfExisting is null and rfSource != 'withdrawal' %}
     {#
         The text shown to the buyer is derived here, on the server, from the buyer's language and the current
         settings, never taken from the request. Keep the version IDs in sync with consent-text.html.twig.
-        A custom text can change later in the settings, so its exact wording is stored with the order.
+        A custom text can change later in the settings, so its exact wording, with the shop name filled in,
+        is stored with the order.
     #}
     {% set rfLanguage = services.repository.search('language', { 'ids': [hook.salesChannelContext.languageId], 'associations': { 'locale': {} } }).first %}
     {% set rfDe = (rfLanguage.locale.code ?? 'de-DE')|lower starts with 'de' %}
     {% set rfCustom = (rfDe ? services.config.app('consentTextDe') : services.config.app('consentTextEn'))|default('')|trim %}
     {% if rfCustom is not empty %}
-        {% set rfStoredText = (rfDe ? 'custom-de: ' : 'custom-en: ') ~ rfCustom %}
+        {% set rfShop = services.config.get('core.basicInformation.shopName', hook.salesChannelContext.salesChannelId)|default('')|trim %}
+        {% set rfStoredText = (rfDe ? 'custom-de: ' : 'custom-en: ') ~ rfCustom|replace({ '{shop}': rfShop }) %}
     {% else %}
         {% set rfStoredText = rfDe ? 'rf-de-2026-10-v1' : 'rf-en-2026-10-v1' %}
     {% endif %}
@@ -56,15 +72,28 @@
         'id': rfOrderId,
         'customFields': {
             'reviewforest_consent': rfConsent,
-            'reviewforest_consent_at': 'now'|date('Y-m-d\\TH:i:sP', 'UTC'),
+            'reviewforest_consent_at': rfNowIso,
             'reviewforest_consent_source': rfSource,
-            'reviewforest_consent_text': rfStoredText|slice(0, 2000)
+            'reviewforest_consent_text': rfStoredText
         }
     }]) %}
+    {% set rfResult = rfConsent %}
+{% elseif rfExisting == 'yes' and rfConsent == 'no' %}
+    {# Withdrawal: the waiting invitation is skipped when the ReviewForest API checks the order before sending. #}
+    {% do services.writer.upsert('order', [{
+        'id': rfOrderId,
+        'customFields': {
+            'reviewforest_consent': 'no',
+            'reviewforest_consent_withdrawn_at': rfNowIso
+        }
+    }]) %}
+    {% set rfResult = 'no' %}
+{% else %}
+    {% set rfResult = rfExisting ?? 'none' %}
 {% endif %}
 
 {% if rfRedirect %}
     {% do hook.setResponse(services.response.redirect('frontend.checkout.finish.page', { 'orderId': rfOrderId })) %}
 {% else %}
-    {% do hook.setResponse(services.response.json({ 'success': true, 'consent': rfExisting ?? rfConsent })) %}
+    {% do hook.setResponse(services.response.json({ 'success': true, 'consent': rfResult })) %}
 {% endif %}

@@ -7,7 +7,7 @@
 {% block page_checkout_confirm_tos %}
     {{ parent() }}
     {% if config('ReviewForest.config.invitationsEnabled') and config('ReviewForest.config.consentMode') == 'checkout_checkbox' %}
-        <div class="reviewforest-consent-checkbox form-check mb-4" data-reviewforest-checkbox>
+        <div class="reviewforest-consent-checkbox form-check mb-4" data-reviewforest-checkbox data-cart-total="{{ page.cart.price.totalPrice }}">
             <input type="checkbox" class="form-check-input" id="reviewforestConsentCheckbox" data-reviewforest-checkbox-input>
             <label class="form-check-label" for="reviewforestConsentCheckbox">
                 {% sw_include '@ReviewForest/storefront/reviewforest/consent-text.html.twig' %}

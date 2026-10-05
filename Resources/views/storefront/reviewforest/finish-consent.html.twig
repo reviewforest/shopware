@@ -21,26 +21,42 @@
     {% set rfEndpoint = path('frontend.script_endpoint', { hook: 'reviewforest-consent' }) %}
     {% set rfThanksYes = rfDe ? 'Danke! Sie erhalten einige Tage nach dem Versand eine E-Mail mit der Bitte um Ihre Bewertung.' : 'Thank you! You will receive an email asking for your review a few days after shipping.' %}
     {% set rfThanksNo = rfDe ? 'Alles klar, wir fragen nicht nach einer Bewertung.' : 'All right, we will not ask you for a review.' %}
+    {% set rfWithdrawn = (rfOrder.customFields ?? {})['reviewforest_consent_withdrawn_at'] ?? null %}
 
     {# In checkbox mode the card stays hidden until the script has stored the checkbox answer. #}
+    {#
+        The order's deep link code (the secret Shopware also uses for guest order links) proves on every request
+        that the answer comes from this order's buyer, also when the shop logs guests out after the checkout.
+    #}
     <div class="reviewforest-consent card checkout-card mt-4 mb-4"
          {% if rfMode == 'checkout_checkbox' and rfAnswer is null %}hidden{% endif %}
          data-reviewforest-consent
+         data-order-created="{{ rfOrder.createdAt|date('U') }}"
+         data-order-total="{{ rfOrder.amountTotal }}"
          data-thanks-yes="{{ rfThanksYes }}"
          data-thanks-no="{{ rfThanksNo }}">
         <div class="card-body">
             {% if rfAnswer == 'yes' %}
-                <p class="reviewforest-consent-result mb-0">{{ rfThanksYes }}</p>
+                <form method="post" action="{{ rfEndpoint }}" class="d-flex flex-wrap align-items-center gap-2" data-reviewforest-consent-form>
+                    <input type="hidden" name="orderId" value="{{ rfOrder.id }}">
+                    <input type="hidden" name="deepLinkCode" value="{{ rfOrder.deepLinkCode }}">
+                    <input type="hidden" name="source" value="withdrawal">
+                    <input type="hidden" name="redirect" value="1">
+                    <p class="reviewforest-consent-result mb-0">{{ rfThanksYes }}</p>
+                    <button type="submit" name="consent" value="no" class="btn btn-link p-0">{{ rfDe ? 'Einwilligung widerrufen' : 'Withdraw consent' }}</button>
+                </form>
             {% elseif rfAnswer == 'no' %}
-                <p class="reviewforest-consent-result mb-0">{{ rfThanksNo }}</p>
+                <p class="reviewforest-consent-result mb-0">{{ rfWithdrawn ? (rfDe ? 'Sie haben Ihre Einwilligung widerrufen. Wir fragen nicht nach einer Bewertung.' : 'You withdrew your consent. We will not ask you for a review.') : rfThanksNo }}</p>
             {% elseif rfMode == 'checkout_checkbox' %}
                 <form method="post" action="{{ rfEndpoint }}" hidden data-reviewforest-checkbox-submit>
                     <input type="hidden" name="orderId" value="{{ rfOrder.id }}">
+                    <input type="hidden" name="deepLinkCode" value="{{ rfOrder.deepLinkCode }}">
                     <input type="hidden" name="source" value="checkout_checkbox">
                 </form>
             {% else %}
                 <form method="post" action="{{ rfEndpoint }}" data-reviewforest-consent-form>
                     <input type="hidden" name="orderId" value="{{ rfOrder.id }}">
+                    <input type="hidden" name="deepLinkCode" value="{{ rfOrder.deepLinkCode }}">
                     <input type="hidden" name="source" value="finish_dialog">
                     <input type="hidden" name="redirect" value="1">
                     <div class="card-title">{{ rfDe ? 'Dürfen wir Sie später um eine Bewertung bitten?' : 'May we ask you for a review later?' }}</div>

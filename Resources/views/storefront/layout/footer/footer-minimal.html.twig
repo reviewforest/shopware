@@ -1,0 +1,7 @@
+{% sw_extends '@Storefront/storefront/layout/footer/footer-minimal.html.twig' %}
+
+{# The checkout uses the minimal footer; the widget shows there only if the merchant enabled checkout pages. #}
+{% block layout_footer_inner_container %}
+    {{ parent() }}
+    {% sw_include '@ReviewForest/storefront/reviewforest/footer-widget.html.twig' %}
+{% endblock %}

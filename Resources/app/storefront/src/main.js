@@ -10,6 +10,7 @@
 
     var STORAGE_KEY = 'reviewforest-checkout-consent';
     var MAX_AGE_MS = 2 * 60 * 60 * 1000; // a checkout answer is only used for an order placed within 2 hours
+    var CLOCK_TOLERANCE_MS = 15 * 60 * 1000;
 
     function storage() {
         try {
@@ -61,7 +62,8 @@
             }
             postConsent(form.getAttribute('action'), {
                 orderId: form.elements.orderId.value,
-                source: 'finish_dialog',
+                deepLinkCode: form.elements.deepLinkCode.value,
+                source: form.elements.source.value,
                 consent: consent,
             })
                 .then(function (result) {
@@ -101,12 +103,15 @@
                 JSON.stringify({
                     consent: input.checked ? 'yes' : 'no',
                     at: Date.now(),
+                    // Binds the answer to this checkout: the finish page only uses it for an order with the same
+                    // total that was placed after the answer.
+                    total: wrapper.getAttribute('data-cart-total'),
                 })
             );
         });
     }
 
-    /* Finish page, mode "checkbox": store the remembered answer on the new order. */
+    /* Finish page, mode "checkbox": store the remembered answer on the order it belongs to. */
     function submitCheckboxAnswer(form) {
         var store = storage();
         if (!store || !window.fetch) {
@@ -118,24 +123,42 @@
         } catch {
             saved = null;
         }
-        store.removeItem(STORAGE_KEY);
-        if (!saved || (saved.consent !== 'yes' && saved.consent !== 'no') || Date.now() - saved.at > MAX_AGE_MS) {
+        var container = form.closest('[data-reviewforest-consent]');
+        var orderCreatedMs = Number(container && container.getAttribute('data-order-created')) * 1000;
+        var orderTotal = container && container.getAttribute('data-order-total');
+        var valid =
+            saved &&
+            (saved.consent === 'yes' || saved.consent === 'no') &&
+            Number.isFinite(saved.at) &&
+            Date.now() - saved.at <= MAX_AGE_MS &&
+            Number.isFinite(orderCreatedMs) &&
+            // the order was placed after the answer (15 minutes tolerance for clock differences) ...
+            orderCreatedMs >= saved.at - CLOCK_TOLERANCE_MS &&
+            orderCreatedMs - saved.at <= MAX_AGE_MS &&
+            // ... and is the checkout the answer was given in
+            saved.total === orderTotal;
+        if (!valid) {
+            // An answer for another checkout, or an old one, is never used.
+            if (saved && Date.now() - saved.at > MAX_AGE_MS) {
+                store.removeItem(STORAGE_KEY);
+            }
             return;
         }
-        var container = form.closest('[data-reviewforest-consent]');
         postConsent(form.getAttribute('action'), {
             orderId: form.elements.orderId.value,
+            deepLinkCode: form.elements.deepLinkCode.value,
             source: 'checkout_checkbox',
             consent: saved.consent,
         })
             .then(function (result) {
+                store.removeItem(STORAGE_KEY);
                 if ((result.consent || saved.consent) === 'yes' && container) {
                     container.hidden = false;
                     showResult(container, 'yes');
                 }
             })
             .catch(function () {
-                /* no answer stored means no invitation */
+                // Kept for the next visit of this page (reload); without a stored answer no invitation is sent.
             });
     }
 

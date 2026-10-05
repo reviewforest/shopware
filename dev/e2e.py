@@ -14,7 +14,8 @@ What it checks, as a buyer and as the merchant would do it:
   2. guest order, consent "yes" through the app's storefront script, stored on the order
   3. delivery shipped -> invitation scheduled with the configured delay, status written to the order
   4. order cancelled -> invitation cancelled
-  5. second order with consent "no" -> shipped -> nothing scheduled
+  5. second order with consent "no" -> shipped -> nothing scheduled; a no cannot become a yes
+  6. yes, shipped, then withdrawn on the finish page -> the invitation is skipped at due time
 Only standard library; the dockware admin login admin/shopware is the image's default for local shops.
 """
 import argparse
@@ -168,14 +169,21 @@ def main():
     order_id, finish_html = place_guest_order(shop, product['id'], f'e2e-yes-{run}@example.com')
     check('guest order placed', bool(order_id))
     check('consent question shown on the order confirmation page', 'data-reviewforest-consent-form' in finish_html)
-    status, answer = shop.post_json('/storefront/script/reviewforest-consent', {'orderId': order_id, 'source': 'finish_dialog', 'consent': 'yes'})
+    deep_link = re.search(r'name="deepLinkCode" value="([^"]+)"', finish_html)
+    deep_link = deep_link.group(1) if deep_link else ''
+    check('order token rendered for the buyer', len(deep_link) >= 20)
+    status, _ = shop.post_json('/storefront/script/reviewforest-consent', {'orderId': order_id, 'source': 'finish_dialog', 'consent': 'yes'})
+    check('consent without the order token is rejected', status == 400, f'HTTP {status}')
+    status, answer = shop.post_json('/storefront/script/reviewforest-consent',
+                                    {'orderId': order_id, 'deepLinkCode': deep_link, 'source': 'finish_dialog', 'consent': 'yes'})
     check('consent endpoint accepts the buyer', status == 200 and answer.get('consent') == 'yes', f'HTTP {status}')
     order = admin.search('order', {'ids': [order_id], 'associations': {'deliveries': {}}})[0]
     custom = order.get('customFields') or {}
     check('consent stored on the order', custom.get('reviewforest_consent') == 'yes' and str(custom.get('reviewforest_consent_text', '')).startswith('rf-'),
           json.dumps({k: v for k, v in custom.items() if k.startswith('reviewforest')}))
     stranger = Storefront(base)
-    status, _ = stranger.post_json('/storefront/script/reviewforest-consent', {'orderId': order_id, 'source': 'finish_dialog', 'consent': 'no'})
+    status, _ = stranger.post_json('/storefront/script/reviewforest-consent',
+                                   {'orderId': order_id, 'deepLinkCode': 'x' * 32, 'source': 'finish_dialog', 'consent': 'no'})
     check('another visitor cannot answer for this order', status in (403, 404), f'HTTP {status}')
 
     # 3. shipped -> scheduled
@@ -197,15 +205,35 @@ def main():
     cancelled = wait_for(lambda: mongo(f"db.invitationJobs.findOne({{externalRef: /{order_id}/}}).status") == 'cancelled')
     check('cancelling the order cancels the invitation', bool(cancelled))
 
-    # 5. consent no -> nothing scheduled
-    order_id, _ = place_guest_order(shop, product['id'], f'e2e-no-{run}@example.com')
-    shop.post_json('/storefront/script/reviewforest-consent', {'orderId': order_id, 'source': 'finish_dialog', 'consent': 'no'})
+    # 5. consent no -> nothing scheduled; a no cannot be turned into a yes
+    order_id, finish_html = place_guest_order(shop, product['id'], f'e2e-no-{run}@example.com')
+    deep_link = re.search(r'name="deepLinkCode" value="([^"]+)"', finish_html).group(1)
+    shop.post_json('/storefront/script/reviewforest-consent', {'orderId': order_id, 'deepLinkCode': deep_link, 'source': 'finish_dialog', 'consent': 'no'})
+    _, again = shop.post_json('/storefront/script/reviewforest-consent', {'orderId': order_id, 'deepLinkCode': deep_link, 'source': 'finish_dialog', 'consent': 'yes'})
+    check('a no stays a no', again.get('consent') == 'no')
     order = admin.search('order', {'ids': [order_id], 'associations': {'deliveries': {}}})[0]
     admin.request('POST', f"/api/_action/order_delivery/{order['deliveries'][0]['id']}/state/ship")
     consume_queue(args.port)
     status_field = wait_for(lambda: (admin.search('order', {'ids': [order_id]})[0].get('customFields') or {}).get('reviewforest_invitation_status'))
     jobs = int(mongo(f"db.invitationJobs.countDocuments({{externalRef: /{order_id}/}})"))
     check('no consent schedules nothing', jobs == 0 and 'no consent' in str(status_field), str(status_field))
+
+    # 6. withdrawal: yes, then withdrawn -> the waiting invitation is skipped at due time
+    order_id, finish_html = place_guest_order(shop, product['id'], f'e2e-withdraw-{run}@example.com')
+    deep_link = re.search(r'name="deepLinkCode" value="([^"]+)"', finish_html).group(1)
+    shop.post_json('/storefront/script/reviewforest-consent', {'orderId': order_id, 'deepLinkCode': deep_link, 'source': 'finish_dialog', 'consent': 'yes'})
+    _, html = shop.get(f'/checkout/finish?orderId={order_id}')
+    check('withdraw option shown after yes', 'name="source" value="withdrawal"' in html)
+    order = admin.search('order', {'ids': [order_id], 'associations': {'deliveries': {}}})[0]
+    admin.request('POST', f"/api/_action/order_delivery/{order['deliveries'][0]['id']}/state/ship")
+    consume_queue(args.port)
+    wait_for(lambda: mongo(f"db.invitationJobs.countDocuments({{externalRef: /{order_id}/, status: 'scheduled'}})") == '1')
+    _, answer = shop.post_json('/storefront/script/reviewforest-consent', {'orderId': order_id, 'deepLinkCode': deep_link, 'source': 'withdrawal', 'consent': 'no'})
+    custom = admin.search('order', {'ids': [order_id]})[0].get('customFields') or {}
+    check('withdrawal stored on the order', answer.get('consent') == 'no' and custom.get('reviewforest_consent') == 'no' and bool(custom.get('reviewforest_consent_withdrawn_at')))
+    mongo(f"db.invitationJobs.updateOne({{externalRef: /{order_id}/, status: 'scheduled'}}, {{$set: {{dueAt: new Date()}}}})")
+    skipped = wait_for(lambda: mongo(f"db.invitationJobs.findOne({{externalRef: /{order_id}/}}).statusReason") == 'no_consent', timeout=30)
+    check('withdrawn consent skips the invitation at due time', bool(skipped))
 
     failed = [name for name, ok in results if not ok]
     print(f"\n{len(results) - len(failed)}/{len(results)} checks passed on {base}")

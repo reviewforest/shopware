@@ -30,9 +30,18 @@ STAGE="$STAGE_PARENT/$APP_NAME"
 trap 'rm -rf "$STAGE_PARENT"' EXIT
 
 mkdir -p "$STAGE" "$ROOT/dist"
-cp -R "$ROOT/Resources" "$STAGE/"
-cp "$ROOT/manifest.xml" "$ROOT/LICENSE" "$ROOT/CHANGELOG.md" "$STAGE/"
-[ -f "$ROOT/README.md" ] && cp "$ROOT/README.md" "$STAGE/"
+# Package exactly what is committed, so stray or untracked files never ship.
+PACKAGED=(Resources manifest.xml LICENSE CHANGELOG.md README.md)
+if [ -n "$(git -C "$ROOT" status --porcelain -- "${PACKAGED[@]}")" ] && [ "${ALLOW_DIRTY:-}" != "1" ]; then
+  echo "Uncommitted changes in packaged files; commit first (or ALLOW_DIRTY=1 for a local test build)." >&2
+  git -C "$ROOT" status --short -- "${PACKAGED[@]}" >&2
+  exit 1
+fi
+if [ "${ALLOW_DIRTY:-}" = "1" ]; then
+  (cd "$ROOT" && cp -R "${PACKAGED[@]}" "$STAGE/")
+else
+  git -C "$ROOT" archive HEAD "${PACKAGED[@]}" | tar -x -C "$STAGE"
+fi
 
 python3 - "$STAGE" <<'PY'
 import os, re, sys

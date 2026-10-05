@@ -25,21 +25,19 @@
         <secret>local-dev-app-secret</secret>
     </setup>
     <permissions>
+        <!-- Orders: read state, customer and language; write the ReviewForest custom fields. -->
         <read>order</read>
         <update>order</update>
         <read>order_customer</read>
         <read>order_delivery</read>
         <read>order_transaction</read>
-        <read>order_line_item</read>
+        <read>state_machine_state</read>
+        <!-- Customer group of the buyer, for excluded customer groups. -->
         <read>customer</read>
-        <read>customer_group</read>
-        <read>sales_channel</read>
-        <read>sales_channel_domain</read>
+        <!-- Language of the order and of the storefront, for the email and the consent text. -->
         <read>language</read>
         <read>locale</read>
-        <read>currency</read>
-        <read>state_machine</read>
-        <read>state_machine_state</read>
+        <!-- The app's own settings per sales channel. -->
         <read>system_config</read>
     </permissions>
     <custom-fields>
@@ -72,10 +70,15 @@
                     <label lang="de-DE">Version des Einwilligungstexts</label>
                     <position>4</position>
                 </text>
+                <datetime name="reviewforest_consent_withdrawn_at">
+                    <label>Consent withdrawn at</label>
+                    <label lang="de-DE">Einwilligung widerrufen am</label>
+                    <position>5</position>
+                </datetime>
                 <text name="reviewforest_invitation_status">
                     <label>Review invitation status</label>
                     <label lang="de-DE">Status der Bewertungseinladung</label>
-                    <position>5</position>
+                    <position>6</position>
                 </text>
             </fields>
         </custom-field-set>
