@@ -162,6 +162,4 @@
             <label lang="de-DE">Diese Kundengruppen nicht einladen</label>
         </component>
     </card>
-
-    <!-- "Tree per order" follows in a later version (RF-12187), once it is billed through the monthly usage. -->
 </config>
