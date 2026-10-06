@@ -1,0 +1,53 @@
+# Builds and validates the app ZIPs. Pull requests and pushes to main build and validate the Store ZIP.
+# A tag v* also builds the help-centre ZIP and creates a draft release; publishing it stays a manual step.
+# Repository secret (only used on tags): SHOPWARE_APP_SECRET, the production app secret for the help-centre ZIP.
+name: Build
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build Store ZIP
+        run: bin/build.sh store
+      - name: Validate Store ZIP with shopware-cli
+        run: |
+          mkdir -p "$RUNNER_TEMP/ext"
+          unzip -q dist/*-store.zip -d "$RUNNER_TEMP/ext"
+          docker run --rm -v "$RUNNER_TEMP/ext:/ext" ghcr.io/shopware/shopware-cli:latest \
+            extension validate --full --store-compliance /ext/ReviewForest
+      - name: Build help-centre ZIP
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          SHOPWARE_APP_SECRET: ${{ secrets.SHOPWARE_APP_SECRET }}
+        run: bin/build.sh zip
+      - uses: actions/upload-artifact@v7
+        with:
+          name: zips
+          path: dist/*.zip
+          retention-days: 30
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          name: zips
+          path: dist
+      - name: Create draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" dist/*.zip --repo "$GITHUB_REPOSITORY" --draft --title "$GITHUB_REF_NAME" --notes "See CHANGELOG.md"

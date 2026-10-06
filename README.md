@@ -25,13 +25,15 @@ The server side lives in the ReviewForest API (`/integrations/shopware/*`). This
 
 ## Development
 
-Requirements: Docker, Node 24 and pnpm for the ReviewForest API worktree, mongosh, Python 3.
+The end-to-end setup needs a local copy of the ReviewForest API, which is not public. Building and validating the ZIPs (below) works without it.
+
+Requirements: Docker, Node 24 and pnpm for the ReviewForest API, mongosh, Python 3.
 
 ```bash
 docker compose -f dev/docker-compose.yml up -d mongo sw67                    # Shopware 6.7 on :8067
 COMPOSE_PROFILES=sw66 docker compose -f dev/docker-compose.yml up -d sw66    # Shopware 6.6 on :8066
 mongosh "mongodb://localhost:27019/rf_shopware_dev?replicaSet=rs0&directConnection=true" dev/seed-api.js
-cp dev/api.env.example <api worktree>/apps/api/.env                          # then start the API on :3000
+cp dev/api.env.example <api checkout>/apps/api/.env                          # then start the API on :3000
 dev/sync-app.sh sw67                                                         # copy, install, compile theme
 python3 dev/e2e.py --port 8067                                               # end-to-end checks
 ```
@@ -49,10 +51,13 @@ Notes from the first run (October 2026):
 bin/build-assets.sh                              # rebuild storefront JS from Resources/app/storefront/src
 bin/build.sh store                               # Shopware Store ZIP, no secret
 SHOPWARE_APP_SECRET=... bin/build.sh zip         # help centre ZIP for self-hosted shops
-APP_NAME=<Prefix>ReviewForest bin/build.sh store  # technical name with the manufacturer prefix
 ```
 
+The technical name is `ReviewForest`. It has to start with our Shopware manufacturer prefix and cannot change once the app is published in the Store.
+
 The build fails if a development URL or the development secret would end up in the package. Validate with `docker run --rm -v "$PWD/<unzipped>":/ext ghcr.io/shopware/shopware-cli:latest extension validate --full --store-compliance /ext`.
+
+GitHub Actions builds and validates the Store ZIP on every pull request and push to `main`. A tag `v*` also builds the help-centre ZIP (with the `SHOPWARE_APP_SECRET` repository secret) and creates a draft release; publishing it is a manual step.
 
 ## License
 
