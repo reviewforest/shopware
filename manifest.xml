@@ -167,6 +167,11 @@
                             <name>Invitations switched off</name>
                             <name lang="de-DE">Einladungen ausgeschaltet</name>
                         </option>
+                        <!-- Test mode (RF-12253), setting testMode in config.xml. -->
+                        <option value="test_mode">
+                            <name>Test mode: nothing sent</name>
+                            <name lang="de-DE">Testmodus: nichts verschickt</name>
+                        </option>
                         <option value="trigger_state_changed">
                             <name>Order status was reset</name>
                             <name lang="de-DE">Status der Bestellung zurückgesetzt</name>
@@ -337,6 +342,11 @@
                         <option value="trees_disabled">
                             <name>Tree per order switched off</name>
                             <name lang="de-DE">Baum pro Bestellung ausgeschaltet</name>
+                        </option>
+                        <!-- Test mode (RF-12253), setting testMode in config.xml. -->
+                        <option value="test_mode">
+                            <name>Test mode: no tree</name>
+                            <name lang="de-DE">Testmodus: kein Baum</name>
                         </option>
                         <option value="order_cancelled">
                             <name>Order cancelled</name>

@@ -19,6 +19,9 @@ What it checks, as a buyer and as the merchant would do it:
   7. tree per order: the buyer names the tree on the finish page, shipped adds it, a cancelled order cancels
      it, and the daily run checks the order against the shop and reports back. Locally the run stops in the
      billing code (no Stripe products in the dev database), so it ends "failed: order_rejected".
+  8. test mode: the buyer still sees consent question and tree choice, shipping schedules no invitation and
+     adds no tree (the order says why); switched on later, it drops a waiting invitation at due time and the
+     daily run cancels a waiting tree. Test mode is switched off again at the end, also after an error.
 Only standard library; the dockware admin login admin/shopware is the image's default for local shops.
 """
 import argparse
@@ -147,6 +150,59 @@ def place_guest_order(shop, product_id, email):
     url, html = shop.post_form('/checkout/order', fields)
     order_id = re.search(r'orderId=([0-9a-f]{32})', url)
     return order_id.group(1) if order_id else None, html
+
+
+def reviewforest_fields(admin, order_id):
+    return {k: v for k, v in (admin.search('order', {'ids': [order_id]})[0].get('customFields') or {}).items() if k.startswith('reviewforest_')}
+
+
+def place_and_ship_with_consent(port, shop, admin, product_id, email):
+    order_id, finish_html = place_guest_order(shop, product_id, email)
+    deep_link = re.search(r'name="deepLinkCode" value="([^"]+)"', finish_html or '')
+    shop.post_json('/storefront/script/reviewforest-consent',
+                   {'orderId': order_id, 'deepLinkCode': deep_link.group(1) if deep_link else '', 'source': 'finish_dialog', 'consent': 'yes'})
+    order = admin.search('order', {'ids': [order_id], 'associations': {'deliveries': {}}})[0]
+    admin.request('POST', f"/api/_action/order_delivery/{order['deliveries'][0]['id']}/state/ship")
+    consume_queue(port)
+    return order_id, finish_html or ''
+
+
+def check_test_mode(port, shop, admin, product_id, run):
+    # 8. test mode (RF-12253): set globally, like tree per order in section 7, and always switched off again.
+    try:
+        admin.request('POST', '/api/_action/system-config', {'ReviewForest.config.testMode': True, 'ReviewForest.config.treePerOrderEnabled': True})
+        order_id, finish_html = place_and_ship_with_consent(port, shop, admin, product_id, f'e2e-test-mode-{run}@example.com')
+        check('test mode: consent question and tree choice still shown',
+              'data-reviewforest-consent-form' in finish_html and 'data-reviewforest-tree-form' in finish_html)
+        custom = wait_for(lambda: (lambda c: c if c.get('reviewforest_invitation_reason') == 'test_mode' and c.get('reviewforest_tree_reason') == 'test_mode'
+                                   else None)(reviewforest_fields(admin, order_id)))
+        jobs = int(mongo(f"db.invitationJobs.countDocuments({{externalRef: /{order_id}/}})"))
+        tree_count = int(mongo(f"db.orderTrees.countDocuments({{externalRef: /{order_id}/}})"))
+        check('test mode: shipping schedules no invitation and adds no tree, the order says why',
+              jobs == 0 and tree_count == 0 and bool(custom) and custom.get('reviewforest_consent') == 'yes'
+              and custom.get('reviewforest_invitation_status') == 'not_scheduled' and custom.get('reviewforest_tree_status') == 'not_planted',
+              f'{jobs} job(s), {tree_count} tree(s), {json.dumps(custom or reviewforest_fields(admin, order_id))}')
+
+        # Switched on after the invitation and the tree were scheduled.
+        admin.request('POST', '/api/_action/system-config', {'ReviewForest.config.testMode': False})
+        later_id, _ = place_and_ship_with_consent(port, shop, admin, product_id, f'e2e-test-mode-later-{run}@example.com')
+        scheduled = wait_for(lambda: mongo(f"db.invitationJobs.countDocuments({{externalRef: /{later_id}/, status: 'scheduled'}})") == '1')
+        waiting = wait_for(lambda: mongo(f"db.orderTrees.findOne({{externalRef: /{later_id}/}})?.status") == 'pending')
+        check('test mode off: invitation scheduled and tree waiting as usual', bool(scheduled) and bool(waiting))
+        admin.request('POST', '/api/_action/system-config', {'ReviewForest.config.testMode': True})
+        mongo(f"db.invitationJobs.updateOne({{externalRef: /{later_id}/, status: 'scheduled'}}, {{$set: {{dueAt: new Date()}}}})")
+        skipped = wait_for(lambda: mongo(f"db.invitationJobs.findOne({{externalRef: /{later_id}/}}).statusReason") == 'test_mode', timeout=30)
+        noted = wait_for(lambda: reviewforest_fields(admin, later_id).get('reviewforest_invitation_reason') == 'test_mode')
+        check('test mode switched on later: the waiting invitation is dropped at due time', bool(skipped) and bool(noted),
+              json.dumps(reviewforest_fields(admin, later_id)))
+        # Same trick as in section 7: the tree from "yesterday" is picked up by the API's daily run within seconds.
+        mongo(f"db.orderTrees.updateOne({{externalRef: /{later_id}/}}, {{$set: {{createdAt: new Date(Date.now() - 864e5)}}}}); db.orderTreeRuns.deleteMany({{}})")
+        cancelled = wait_for(lambda: mongo(f"db.orderTrees.findOne({{externalRef: /{later_id}/}})?.statusReason") == 'test_mode', timeout=60)
+        reported = wait_for(lambda: reviewforest_fields(admin, later_id).get('reviewforest_tree_reason') == 'test_mode')
+        check('test mode switched on later: the daily run cancels the waiting tree, the order says why', bool(cancelled) and bool(reported),
+              mongo(f"JSON.stringify(db.orderTrees.findOne({{externalRef: /{later_id}/}}, {{status: 1, statusReason: 1}}))"))
+    finally:
+        admin.request('POST', '/api/_action/system-config', {'ReviewForest.config.testMode': False, 'ReviewForest.config.treePerOrderEnabled': False})
 
 
 def main():
@@ -296,6 +352,8 @@ def main():
           record.get('status') == 'planted' or (record.get('status') == 'failed' and record.get('statusReason') == 'order_rejected'), json.dumps(record))
     check('the result of the daily run is written to the order', bool(reported), str(tree_status))
     admin.request('POST', '/api/_action/system-config', {'ReviewForest.config.treePerOrderEnabled': False})
+
+    check_test_mode(args.port, shop, admin, product['id'], run)
 
     failed = [name for name, ok in results if not ok]
     print(f"\n{len(results) - len(failed)}/{len(results)} checks passed on {base}")
