@@ -26,11 +26,17 @@
                 <parameter type="string" name="delayDays" value="{{ delayDays }}"/>
             </parameters>
             <config>
-                <!-- Text, not int: Shopware renders every flow action config value as a template string. -->
+                <!--
+                    Text, not int: Shopware renders every flow action config value as a template string.
+                    The help text is required in practice: without one the Shopware admin (6.6 and 6.7) fails to
+                    open the action's settings and the action cannot be added to a flow.
+                -->
                 <input-field type="text">
                     <name>delayDays</name>
                     <label>Delay in days (1 to 60)</label>
                     <label lang="de-DE">Wartezeit in Tagen (1 bis 60)</label>
+                    <helpText>Days between the trigger of this flow and the invitation. Without the buyer's consent no invitation is sent.</helpText>
+                    <helpText lang="de-DE">Tage zwischen dem Auslöser dieses Flows und der Einladung. Ohne Einwilligung des Käufers wird keine Einladung verschickt.</helpText>
                     <defaultValue>7</defaultValue>
                     <required>true</required>
                 </input-field>
