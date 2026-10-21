@@ -55,8 +55,8 @@
                 <single-select name="reviewforest_consent">
                     <label>Review invitation consent</label>
                     <label lang="de-DE">Einwilligung Bewertungseinladung</label>
-                    <help-text>The buyer's answer. Record of the consent: please do not change it by hand.</help-text>
-                    <help-text lang="de-DE">Die Antwort des Käufers. Nachweis der Einwilligung: bitte nicht von Hand ändern.</help-text>
+                    <help-text>The buyer's answer. Record of the consent: please do not change it by hand. ReviewForest keeps its own copy when the invitation is scheduled; if the record is changed afterwards, the invitation is not sent.</help-text>
+                    <help-text lang="de-DE">Die Antwort des Käufers. Nachweis der Einwilligung: bitte nicht von Hand ändern. ReviewForest speichert beim Planen der Einladung eine eigene Kopie; wird der Nachweis danach geändert, wird die Einladung nicht verschickt.</help-text>
                     <position>1</position>
                     <options>
                         <option value="yes">
@@ -155,6 +155,12 @@
                             <name>No consent from the buyer</name>
                             <name lang="de-DE">Keine Einwilligung des Käufers</name>
                         </option>
+                        <!-- RF-12252 (invitation-sender): the consent fields differ from ReviewForest's copy taken when the invitation was scheduled. -->
+                        <option value="consent_record_changed">
+                            <name>Consent record on the order was changed</name>
+                            <name lang="de-DE">Einwilligungsnachweis an der Bestellung geändert</name>
+                        </option>
+                        <!-- /RF-12252 -->
                         <option value="customer_group_excluded">
                             <name>Customer group excluded</name>
                             <name lang="de-DE">Kundengruppe ausgeschlossen</name>

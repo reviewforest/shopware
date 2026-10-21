@@ -6,6 +6,8 @@
 - On the order confirmation page buyers choose how their tree appears: with their name, initials only, a dedication or without a name. The choice and the tree status are stored on the order.
 - The ReviewForest fields on the order show translated labels: status, reason and date of the invitation and of the tree, the buyer's answer and where it was given. Dates are shown in the merchant's time zone.
 - Invitation emails carry a subject with the shop name ("Ihre Bewertung für <Shop> pflanzt einen Baum").
+- Invitation emails come from "<Shop> über ReviewForest" ("<Shop> via ReviewForest" in English), still sent from noreply-invite@reviewforest.org. Replies go to the shop's email address from Settings > Basic information.
+- ReviewForest keeps its own copy of the consent record when it schedules an invitation. If the time of the answer, where it was given or the text version is changed on the order before sending, the invitation is not sent (reason "Consent record on the order was changed"). A withdrawal time on the order always stops the invitation.
 - New setting "one of my flows schedules it": no automatic invitations, only Flow Builder flows invite. The Flow Builder action can be added to flows again (its settings did not open).
 - Buyers in excluded customer groups are no longer asked for consent; their orders show why they are not invited.
 - The widget fields accept the whole embed code.
