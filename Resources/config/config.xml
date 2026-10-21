@@ -9,15 +9,15 @@
             <name>apiKey</name>
             <label>ReviewForest API key (read and write)</label>
             <label lang="de-DE">ReviewForest API-Schlüssel (Lesen und Schreiben)</label>
-            <helpText>Create the key in ReviewForest under Integrations, API. Needed for review invitations only.</helpText>
-            <helpText lang="de-DE">Den Schlüssel erstellen Sie in ReviewForest unter Integrationen, API. Nur für Bewertungseinladungen nötig.</helpText>
+            <helpText>Create the key in ReviewForest under Integrations, API. Needed for review invitations and tree per order; the widgets work without it.</helpText>
+            <helpText lang="de-DE">Den Schlüssel erstellen Sie in ReviewForest unter Integrationen, API. Nötig für Bewertungseinladungen und Baum pro Bestellung; die Widgets funktionieren auch ohne.</helpText>
         </input-field>
         <input-field type="text">
             <name>forestId</name>
             <label>Forest ID</label>
             <label lang="de-DE">ID des Bewertungswalds</label>
-            <helpText>The ID of the Bewertungswald that receives the invitations of this sales channel.</helpText>
-            <helpText lang="de-DE">Die ID des Bewertungswalds, an den die Einladungen dieses Verkaufskanals gehen.</helpText>
+            <helpText>The ID of the Bewertungswald that receives the invitations and the order trees of this sales channel.</helpText>
+            <helpText lang="de-DE">Die ID des Bewertungswalds, an den die Einladungen und die Bestellbäume dieses Verkaufskanals gehen.</helpText>
         </input-field>
     </card>
 
