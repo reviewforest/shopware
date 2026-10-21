@@ -267,13 +267,16 @@ def main():
     order_id, finish_html = place_guest_order(shop, product['id'], f'e2e-tree-{run}@example.com')
     check('tree name question shown on the order confirmation page', 'data-reviewforest-tree-form' in finish_html)
     # RF-12251: the tree card links to the shop's Bewertungswald through the API, which redirects by forest ID.
-    # The forest ID can be set per sales channel, so it is taken from the link and compared with a global value.
     link = re.search(r'<p class="reviewforest-tree-link[^"]*">\s*<a href="([^"]+)" target="_blank" rel="noopener">', finish_html)
     href = urllib.parse.urlsplit(link.group(1).replace('&amp;', '&')) if link else None
     path = re.fullmatch(r'/integrations/shopware/forest-page/([0-9a-fA-F]{24})', href.path) if href else None
     forest_id = path.group(1) if path else ''
-    configured = str(config.get('ReviewForest.config.forestId') or '').strip()
-    check('the tree card links to the Bewertungswald', bool(forest_id) and configured in ('', forest_id), link.group(1) if link else 'no link')
+    # The forest ID of the order's sales channel, else the global one (an empty channel value inherits, as in the API).
+    channel_id = admin.search('order', {'ids': [order_id]})[0]['salesChannelId']
+    channel = admin.request('GET', f'/api/_action/system-config?domain=ReviewForest.config&salesChannelId={channel_id}')
+    configured = str(channel.get('ReviewForest.config.forestId') or config.get('ReviewForest.config.forestId') or '').strip()
+    check('the tree card links to the Bewertungswald', bool(forest_id) and forest_id.lower() == configured.lower(),
+          f"{link.group(1) if link else 'no link'} (configured: {configured})")
     if forest_id:
         status, location = api_get(f'{href.path}?{href.query}')
         slug = mongo(f"db.forests.findOne({{_id: ObjectId('{forest_id}')}})?.slug")
