@@ -1,9 +1,10 @@
 /*
- * ReviewForest app for Shopware: consent handling in the storefront.
+ * ReviewForest app for Shopware: consent and tree name handling in the storefront.
  *
  * Plain JavaScript without build step or dependencies. Everything works without it too:
  * - Finish page question: the form posts normally and the script endpoint redirects back.
  * - Checkout checkbox: without JavaScript no answer is stored, so no invitation is sent (fail-safe).
+ * - Tree name (tree per order): the form posts normally and the script endpoint redirects back.
  */
 (function () {
     'use strict';
@@ -20,7 +21,7 @@
         }
     }
 
-    function postConsent(action, payload) {
+    function postJson(action, payload) {
         return window.fetch(action, {
             method: 'POST',
             credentials: 'same-origin',
@@ -28,7 +29,7 @@
             body: JSON.stringify(payload),
         }).then(function (response) {
             if (!response.ok) {
-                throw new Error('ReviewForest consent request failed with ' + response.status);
+                throw new Error('ReviewForest request failed with ' + response.status);
             }
             return response.json();
         });
@@ -103,7 +104,7 @@
             for (var i = 0; i < buttons.length; i++) {
                 buttons[i].disabled = true;
             }
-            postConsent(form.getAttribute('action'), {
+            postJson(form.getAttribute('action'), {
                 orderId: form.elements.orderId.value,
                 deepLinkCode: form.elements.deepLinkCode.value,
                 source: form.elements.source.value,
@@ -188,7 +189,7 @@
             }
             return;
         }
-        postConsent(form.getAttribute('action'), {
+        postJson(form.getAttribute('action'), {
             orderId: form.elements.orderId.value,
             deepLinkCode: form.elements.deepLinkCode.value,
             source: 'checkout_checkbox',
@@ -206,6 +207,50 @@
             });
     }
 
+    /** Tree per order: sends the name choice in the background and shows what was saved. */
+    function initTreeForm(form) {
+        var container = form.closest('[data-reviewforest-tree]');
+        var result = form.querySelector('.reviewforest-tree-result');
+        var button = form.querySelector('button[type="submit"]');
+        var dedication = form.elements.dedication;
+        var dedicationChoice = form.querySelector('input[name="treeChoice"][value="dedication"]');
+        if (dedication && dedicationChoice) {
+            // Typing a dedication selects that option.
+            dedication.addEventListener('input', function () {
+                dedicationChoice.checked = true;
+            });
+        }
+        form.addEventListener('submit', function (event) {
+            if (!window.fetch || !container || !result) {
+                return;
+            }
+            event.preventDefault();
+            var checked = form.querySelector('input[name="treeChoice"]:checked');
+            if (button) {
+                button.disabled = true;
+            }
+            postJson(form.getAttribute('action'), {
+                orderId: form.elements.orderId.value,
+                deepLinkCode: form.elements.deepLinkCode.value,
+                treeChoice: checked ? checked.value : 'none',
+                dedication: dedication ? dedication.value : '',
+            })
+                .then(function (answer) {
+                    result.textContent = answer.name
+                        ? container.getAttribute('data-saved-named') + ' ' + answer.name
+                        : container.getAttribute('data-saved-anonymous');
+                })
+                .catch(function () {
+                    result.textContent = container.getAttribute('data-error');
+                })
+                .then(function () {
+                    if (button) {
+                        button.disabled = false;
+                    }
+                });
+        });
+    }
+
     function init() {
         var forms = document.querySelectorAll('[data-reviewforest-consent-form]');
         for (var i = 0; i < forms.length; i++) {
@@ -218,6 +263,10 @@
         var checkboxSubmits = document.querySelectorAll('[data-reviewforest-checkbox-submit]');
         for (var k = 0; k < checkboxSubmits.length; k++) {
             submitCheckboxAnswer(checkboxSubmits[k]);
+        }
+        var treeForms = document.querySelectorAll('[data-reviewforest-tree-form]');
+        for (var m = 0; m < treeForms.length; m++) {
+            initTreeForm(treeForms[m]);
         }
     }
 

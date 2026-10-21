@@ -14,7 +14,7 @@
         <description lang="de-DE">Zeigt Ihre ReviewForest-Widgets auf allen Seiten und lädt Käufer, die zugestimmt haben, einige Tage nach dem Versand zu einer Bewertung ein. Für jede Bewertung wird ein Baum gepflanzt.</description>
         <author>ReviewForest GmbH</author>
         <copyright>(c) ReviewForest GmbH</copyright>
-        <version>0.1.0</version>
+        <version>0.2.0</version>
         <icon>Resources/config/plugin.png</icon>
         <license>MIT</license>
         <privacy>https://reviewforest.org/privacy</privacy>
@@ -79,6 +79,23 @@
                     <label>Review invitation status</label>
                     <label lang="de-DE">Status der Bewertungseinladung</label>
                     <position>6</position>
+                </text>
+                <text name="reviewforest_tree_choice">
+                    <label>Tree name choice</label>
+                    <label lang="de-DE">Wahl für den Baumnamen</label>
+                    <help-text>name, initials, dedication or none, chosen by the buyer on the order confirmation page.</help-text>
+                    <help-text lang="de-DE">name, initials, dedication oder none, gewählt vom Käufer auf der Bestellbestätigung.</help-text>
+                    <position>7</position>
+                </text>
+                <text name="reviewforest_tree_name">
+                    <label>Tree name</label>
+                    <label lang="de-DE">Name des Baums</label>
+                    <position>8</position>
+                </text>
+                <text name="reviewforest_tree_status">
+                    <label>Tree status</label>
+                    <label lang="de-DE">Status des Baums</label>
+                    <position>9</position>
                 </text>
             </fields>
         </custom-field-set>

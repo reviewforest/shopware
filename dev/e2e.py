@@ -16,9 +16,13 @@ What it checks, as a buyer and as the merchant would do it:
   4. order cancelled -> invitation cancelled
   5. second order with consent "no" -> shipped -> nothing scheduled; a no cannot become a yes
   6. yes, shipped, then withdrawn on the finish page -> the invitation is skipped at due time
+  7. tree per order: the buyer names the tree on the finish page, shipped adds it, a cancelled order cancels
+     it, and the daily run checks the order against the shop and reports back. Locally the run stops in the
+     billing code (no Stripe products in the dev database), so it ends "failed: order_rejected".
 Only standard library; the dockware admin login admin/shopware is the image's default for local shops.
 """
 import argparse
+import calendar
 import http.cookiejar
 import json
 import re
@@ -192,7 +196,8 @@ def main():
     consume_queue(args.port)
     job = wait_for(lambda: json.loads(mongo(f"JSON.stringify(db.invitationJobs.findOne({{externalRef: /{order_id}/}}, {{status: 1, dueAt: 1, createdAt: 1}}))") or 'null'))
     if job:
-        days = (time.mktime(time.strptime(job['dueAt'][:19], '%Y-%m-%dT%H:%M:%S')) - time.mktime(time.strptime(job['createdAt'][:19], '%Y-%m-%dT%H:%M:%S'))) / 86400
+        # UTC timestamps: a local-time difference would be off by an hour across a daylight saving change.
+        days = (calendar.timegm(time.strptime(job['dueAt'][:19], '%Y-%m-%dT%H:%M:%S')) - calendar.timegm(time.strptime(job['createdAt'][:19], '%Y-%m-%dT%H:%M:%S'))) / 86400
         check('shipped schedules one invitation', job['status'] == 'scheduled' and abs(days - delay_days) < 0.01, f'due in {days:.2f} days')
     else:
         check('shipped schedules one invitation', False, 'no job')
@@ -234,6 +239,55 @@ def main():
     mongo(f"db.invitationJobs.updateOne({{externalRef: /{order_id}/, status: 'scheduled'}}, {{$set: {{dueAt: new Date()}}}})")
     skipped = wait_for(lambda: mongo(f"db.invitationJobs.findOne({{externalRef: /{order_id}/}}).statusReason") == 'no_consent', timeout=30)
     check('withdrawn consent skips the invitation at due time', bool(skipped))
+
+    # 7. tree per order
+    admin.request('POST', '/api/_action/system-config', {'ReviewForest.config.treePerOrderEnabled': True})
+    order_id, finish_html = place_guest_order(shop, product['id'], f'e2e-tree-{run}@example.com')
+    check('tree name question shown on the order confirmation page', 'data-reviewforest-tree-form' in finish_html)
+    deep_link = re.search(r'name="deepLinkCode" value="([^"]+)"', finish_html).group(1)
+    status, answer = shop.post_json('/storefront/script/reviewforest-tree', {'orderId': order_id, 'deepLinkCode': deep_link, 'treeChoice': 'initials'})
+    check('initials are built from the order, not from the request', status == 200 and answer.get('name') == 'E. T.', f"HTTP {status} {answer}")
+    status, answer = shop.post_json('/storefront/script/reviewforest-tree',
+                                    {'orderId': order_id, 'deepLinkCode': deep_link, 'treeChoice': 'dedication', 'dedication': ' Für <b>Oma</b>\nErna ' + 'x' * 60})
+    name = str(answer.get('name', ''))
+    check('a dedication is one plain line of at most 40 characters', status == 200 and name.startswith('Für Oma Erna') and '<' not in name and len(name) <= 40, repr(name))
+    status, _ = Storefront(base).post_json('/storefront/script/reviewforest-tree', {'orderId': order_id, 'deepLinkCode': 'x' * 32, 'treeChoice': 'name'})
+    check('another visitor cannot name this tree', status in (403, 404), f'HTTP {status}')
+    custom = admin.search('order', {'ids': [order_id]})[0].get('customFields') or {}
+    check('tree name stored on the order', custom.get('reviewforest_tree_choice') == 'dedication' and custom.get('reviewforest_tree_name') == name)
+    order = admin.search('order', {'ids': [order_id], 'associations': {'deliveries': {}}})[0]
+    admin.request('POST', f"/api/_action/order_delivery/{order['deliveries'][0]['id']}/state/ship")
+    consume_queue(args.port)
+    tree = wait_for(lambda: mongo(f"db.orderTrees.findOne({{externalRef: /{order_id}/}})?.status") == 'pending')
+    tree_status = (admin.search('order', {'ids': [order_id]})[0].get('customFields') or {}).get('reviewforest_tree_status')
+    check('shipped adds one tree for the next daily run', bool(tree) and str(tree_status).startswith('pending'), str(tree_status))
+    admin.request('POST', f"/api/_action/order_delivery/{order['deliveries'][0]['id']}/state/ship")
+    consume_queue(args.port)
+    check('a repeated webhook adds no second tree', mongo(f"db.orderTrees.countDocuments({{externalRef: /{order_id}/}})") == '1')
+
+    cancelled_id, _ = place_guest_order(shop, product['id'], f'e2e-tree-cancel-{run}@example.com')
+    other = admin.search('order', {'ids': [cancelled_id], 'associations': {'deliveries': {}}})[0]
+    admin.request('POST', f"/api/_action/order_delivery/{other['deliveries'][0]['id']}/state/ship")
+    consume_queue(args.port)
+    wait_for(lambda: mongo(f"db.orderTrees.findOne({{externalRef: /{cancelled_id}/}})?.status") == 'pending')
+    admin.request('POST', f'/api/_action/order/{cancelled_id}/state/cancel')
+    consume_queue(args.port)
+    cancelled = wait_for(lambda: mongo(f"db.orderTrees.findOne({{externalRef: /{cancelled_id}/}})?.status") == 'cancelled')
+    check('a cancelled order cancels its waiting tree', bool(cancelled))
+
+    # The daily run takes trees from before today (UTC), once per forest and day: move the tree to yesterday
+    # and forget earlier local runs, then the API's worker picks it up within seconds.
+    mongo(f"db.orderTrees.updateOne({{externalRef: /{order_id}/}}, {{$set: {{createdAt: new Date(Date.now() - 864e5)}}}}); db.orderTreeRuns.deleteMany({{}})")
+    final = wait_for(lambda: mongo(f"db.orderTrees.findOne({{externalRef: /{order_id}/}})?.status") in ('planted', 'failed', 'uncertain'), timeout=60)
+    record = json.loads(mongo(f"JSON.stringify(db.orderTrees.findOne({{externalRef: /{order_id}/}}, {{status: 1, statusReason: 1}}))") or '{}')
+    reported = wait_for(lambda: not str((admin.search('order', {'ids': [order_id]})[0].get('customFields') or {}).get('reviewforest_tree_status')).startswith('pending'))
+    tree_status = (admin.search('order', {'ids': [order_id]})[0].get('customFields') or {}).get('reviewforest_tree_status')
+    # 'order_rejected' means the shop check passed and the run reached the billing code, which stops locally
+    # because the dev database has no Stripe products. With real Stripe test data the status is 'planted'.
+    check('the daily run checks the order and reaches the billing call',
+          record.get('status') == 'planted' or (record.get('status') == 'failed' and record.get('statusReason') == 'order_rejected'), json.dumps(record))
+    check('the result of the daily run is written to the order', bool(reported), str(tree_status))
+    admin.request('POST', '/api/_action/system-config', {'ReviewForest.config.treePerOrderEnabled': False})
 
     failed = [name for name, ok in results if not ok]
     print(f"\n{len(results) - len(failed)}/{len(results)} checks passed on {base}")

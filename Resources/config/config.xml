@@ -162,4 +162,56 @@
             <label lang="de-DE">Diese Kundengruppen nicht einladen</label>
         </component>
     </card>
+
+    <card>
+        <title>Tree per order</title>
+        <title lang="de-DE">Baum pro Bestellung</title>
+        <input-field type="bool">
+            <name>treePerOrderEnabled</name>
+            <label>Plant a tree for every order</label>
+            <label lang="de-DE">Für jede Bestellung einen Baum pflanzen</label>
+            <defaultValue>false</defaultValue>
+            <helpText>The trees of a day are ordered together once a day as additional trees in your ReviewForest forest, at your price for additional trees. That is usually one invoice a day. Cancelled, returned or refunded orders get no tree. Uses the API key and forest from "Connection".</helpText>
+            <helpText lang="de-DE">Die Bäume eines Tages werden einmal täglich gesammelt als zusätzliche Bäume in Ihrem Bewertungswald bestellt, zu Ihrem Preis für zusätzliche Bäume. Das ist in der Regel eine Rechnung pro Tag. Stornierte, retournierte oder erstattete Bestellungen bekommen keinen Baum. Nutzt den API-Schlüssel und den Bewertungswald aus "Verbindung".</helpText>
+        </input-field>
+        <input-field type="single-select">
+            <name>treeTrigger</name>
+            <label>Plant the tree when</label>
+            <label lang="de-DE">Baum pflanzen, wenn</label>
+            <defaultValue>shipped</defaultValue>
+            <options>
+                <option>
+                    <id>shipped</id>
+                    <name>the delivery is shipped</name>
+                    <name lang="de-DE">die Lieferung versandt ist</name>
+                </option>
+                <option>
+                    <id>paid</id>
+                    <name>the payment is received</name>
+                    <name lang="de-DE">die Zahlung eingegangen ist</name>
+                </option>
+                <option>
+                    <id>completed</id>
+                    <name>the order is completed</name>
+                    <name lang="de-DE">die Bestellung abgeschlossen ist</name>
+                </option>
+            </options>
+        </input-field>
+        <input-field type="bool">
+            <name>treeAskName</name>
+            <label>Let buyers name their tree</label>
+            <label lang="de-DE">Käufer dürfen ihren Baum benennen</label>
+            <defaultValue>true</defaultValue>
+            <helpText>On the order confirmation page buyers choose: their name, initials only, a dedication or no name. Without an answer the tree has no name.</helpText>
+            <helpText lang="de-DE">Auf der Bestellbestätigung wählen Käufer: ihren Namen, nur Initialen, eine Widmung oder keinen Namen. Ohne Antwort bekommt der Baum keinen Namen.</helpText>
+        </input-field>
+        <input-field>
+            <name>treeOccasion</name>
+            <label>Occasion shown with the tree</label>
+            <label lang="de-DE">Anlass, der beim Baum steht</label>
+            <placeholder>Für eine Bestellung</placeholder>
+            <helpText>Optional, at most 100 characters. If empty: "Für eine Bestellung" or "For an order", depending on the language of the order.</helpText>
+            <helpText lang="de-DE">Optional, höchstens 100 Zeichen. Wenn leer: "Für eine Bestellung" oder "For an order", je nach Sprache der Bestellung.</helpText>
+        </input-field>
+    </card>
 </config>

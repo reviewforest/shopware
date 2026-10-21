@@ -1,7 +1,8 @@
 {% sw_extends '@Storefront/storefront/page/checkout/finish/finish-details.html.twig' %}
 
-{# The consent question is its own card right below the order confirmation card. #}
+{# The consent question and the tree name question are their own cards right below the order confirmation card. #}
 {% block page_checkout_finish_data %}
     {{ parent() }}
     {% sw_include '@ReviewForest/storefront/reviewforest/finish-consent.html.twig' %}
+    {% sw_include '@ReviewForest/storefront/reviewforest/finish-tree.html.twig' %}
 {% endblock %}

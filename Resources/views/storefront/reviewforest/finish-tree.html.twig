@@ -1,0 +1,97 @@
+{#
+    Tree per order on the order confirmation page: the buyer chooses how the order's tree appears in the
+    shop's Bewertungswald (with name, initials, a dedication or without a name).
+    Works without JavaScript (plain form post, the script endpoint redirects back here); with JavaScript the
+    choice is sent in the background. The choice is written to the order custom fields by
+    Resources/scripts/storefront-reviewforest-tree; the ReviewForest API reads it in the daily run that orders
+    the trees.
+#}
+{% set rfOrder = page.order %}
+{% set rfTreeStatus = (rfOrder.customFields ?? {})['reviewforest_tree_status'] ?? '' %}
+{% if rfOrder
+    and config('ReviewForest.config.treePerOrderEnabled')
+    and config('ReviewForest.config.treeAskName') is not same as(false)
+    and not (rfTreeStatus starts with 'not planted') %}
+    {% if context.languageInfo is defined and context.languageInfo %}
+        {% set rfLocale = context.languageInfo.localeCode %}
+    {% elseif page.header.activeLanguage.translationCode.code is defined %}
+        {% set rfLocale = page.header.activeLanguage.translationCode.code %}
+    {% else %}
+        {% set rfLocale = app.request.locale|default('de-DE') %}
+    {% endif %}
+    {% set rfDe = rfLocale|lower starts with 'de' %}
+    {% set rfShop = config('core.basicInformation.shopName')|default('')|trim %}
+    {% set rfFirst = rfOrder.orderCustomer.firstName|default('')|trim %}
+    {% set rfLast = rfOrder.orderCustomer.lastName|default('')|trim %}
+    {% set rfFullName = (rfFirst ~ ' ' ~ rfLast)|trim %}
+    {% set rfInitials = ((rfFirst ? rfFirst|slice(0, 1)|upper ~ '.' : '') ~ ' ' ~ (rfLast ? rfLast|slice(0, 1)|upper ~ '.' : ''))|trim %}
+    {% set rfChoice = (rfOrder.customFields ?? {})['reviewforest_tree_choice'] ?? null %}
+    {% set rfName = (rfOrder.customFields ?? {})['reviewforest_tree_name'] ?? '' %}
+    {% set rfSavedNamed = rfDe ? 'Gespeichert. Ihr Baum erscheint mit diesem Namen:' : 'Saved. Your tree will appear with this name:' %}
+    {% set rfSavedAnonymous = rfDe ? 'Gespeichert. Ihr Baum erscheint ohne Namen.' : 'Saved. Your tree will appear without a name.' %}
+    {% set rfEndpoint = path('frontend.script_endpoint', { hook: 'reviewforest-tree' }) %}
+
+    <div class="reviewforest-tree card checkout-card mt-4 mb-4"
+         data-reviewforest-tree
+         data-saved-named="{{ rfSavedNamed }}"
+         data-saved-anonymous="{{ rfSavedAnonymous }}"
+         data-error="{{ rfDe ? 'Das hat leider nicht geklappt. Bitte versuchen Sie es noch einmal.' : 'That did not work. Please try again.' }}">
+        <div class="card-body">
+            <div class="card-title">{{ rfDe ? 'Für Ihre Bestellung pflanzen wir einen Baum' : 'We plant a tree for your order' }}</div>
+            {% if rfTreeStatus starts with 'planted' %}
+                <p class="reviewforest-tree-result mb-0">
+                    {{ rfDe ? 'Ihr Baum ist gepflanzt.' : 'Your tree has been planted.' }}
+                    {% if rfName %}{{ rfDe ? 'Er trägt den Namen:' : 'Its name:' }} {{ rfName }}{% endif %}
+                </p>
+            {% else %}
+                <form method="post" action="{{ rfEndpoint }}" data-reviewforest-tree-form>
+                    <input type="hidden" name="orderId" value="{{ rfOrder.id }}">
+                    <input type="hidden" name="deepLinkCode" value="{{ rfOrder.deepLinkCode }}">
+                    <input type="hidden" name="redirect" value="1">
+                    <p>
+                        {% if rfShop %}
+                            {{ rfDe ? 'Wie soll er im Bewertungswald von ' ~ rfShop ~ ' erscheinen?' : 'How should it appear in the review forest of ' ~ rfShop ~ '?' }}
+                        {% else %}
+                            {{ rfDe ? 'Wie soll er im Bewertungswald erscheinen?' : 'How should it appear in the review forest?' }}
+                        {% endif %}
+                    </p>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="treeChoice" value="none" id="reviewforest-tree-none"
+                               {% if rfChoice is null or rfChoice == 'none' %}checked{% endif %}>
+                        <label class="form-check-label" for="reviewforest-tree-none">{{ rfDe ? 'Ohne Namen' : 'Without a name' }}</label>
+                    </div>
+                    {% if rfFullName %}
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="treeChoice" value="name" id="reviewforest-tree-name"
+                                   {% if rfChoice == 'name' %}checked{% endif %}>
+                            <label class="form-check-label" for="reviewforest-tree-name">{{ rfDe ? 'Mit meinem Namen:' : 'With my name:' }} {{ rfFullName }}</label>
+                        </div>
+                    {% endif %}
+                    {% if rfInitials %}
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="treeChoice" value="initials" id="reviewforest-tree-initials"
+                                   {% if rfChoice == 'initials' %}checked{% endif %}>
+                            <label class="form-check-label" for="reviewforest-tree-initials">{{ rfDe ? 'Nur mit meinen Initialen:' : 'With my initials only:' }} {{ rfInitials }}</label>
+                        </div>
+                    {% endif %}
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="treeChoice" value="dedication" id="reviewforest-tree-dedication"
+                               {% if rfChoice == 'dedication' %}checked{% endif %}>
+                        <label class="form-check-label" for="reviewforest-tree-dedication">{{ rfDe ? 'Mit einer Widmung:' : 'With a dedication:' }}</label>
+                        <input class="form-control mt-1" type="text" name="dedication" maxlength="40"
+                               aria-label="{{ rfDe ? 'Widmung' : 'Dedication' }}"
+                               placeholder="{{ rfDe ? 'zum Beispiel: Für Oma Erna' : 'for example: For grandma Erna' }}"
+                               value="{{ rfChoice == 'dedication' ? rfName : '' }}">
+                    </div>
+                    <p class="text-muted small mt-2">{{ rfDe ? 'Name oder Widmung sind im Bewertungswald öffentlich zu sehen.' : 'The name or dedication is shown publicly in the review forest.' }}</p>
+                    <div class="d-flex flex-wrap align-items-center gap-2">
+                        <button type="submit" class="btn btn-outline-primary">{{ rfDe ? 'Speichern' : 'Save' }}</button>
+                        <span class="reviewforest-tree-result" aria-live="polite">
+                            {% if rfChoice %}{{ rfName ? rfSavedNamed ~ ' ' ~ rfName : rfSavedAnonymous }}{% endif %}
+                        </span>
+                    </div>
+                </form>
+            {% endif %}
+        </div>
+    </div>
+{% endif %}

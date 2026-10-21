@@ -1,0 +1,84 @@
+{#
+    POST /storefront/script/reviewforest-tree
+    Stores how the buyer wants the order's tree to be named (tree per order) on the order (custom fields).
+
+    Same protection as the consent answer: every request carries the order's deep link code, a logged-in
+    customer must own the order, and a logged-out guest can only answer within two hours after the order.
+    The public name is built here from the order's customer name, never taken from the request. Only a
+    dedication comes from the buyer; it is cut to one line of at most 40 characters here, and the ReviewForest
+    API cleans it again before it orders the tree.
+
+    The choice can change until the daily run has ordered the tree (status "planted ...").
+#}
+{% set rfOrderId = hook.request.orderId|default('') %}
+{% set rfDeepLinkCode = hook.request.deepLinkCode|default('') %}
+{% set rfChoice = hook.request.treeChoice|default('') %}
+{% set rfDedication = hook.request.dedication|default('') %}
+{% set rfRedirect = hook.request.redirect|default('') == '1' %}
+{% set rfCustomer = hook.salesChannelContext.customer %}
+{% set rfNow = 'now'|date('U') %}
+
+{% if rfOrderId|length != 32 or rfDeepLinkCode|length < 20 or rfChoice not in ['none', 'name', 'initials', 'dedication'] %}
+    {% do hook.setResponse(services.response.json({ 'success': false, 'error': 'invalid_request' }, 400)) %}
+    {% return %}
+{% endif %}
+{% if not services.config.app('treePerOrderEnabled') or services.config.app('treeAskName') is same as(false) %}
+    {% do hook.setResponse(services.response.json({ 'success': false, 'error': 'trees_disabled' }, 403)) %}
+    {% return %}
+{% endif %}
+
+{% set rfFilter = [
+    { 'type': 'equals', 'field': 'deepLinkCode', 'value': rfDeepLinkCode },
+    { 'type': 'equals', 'field': 'salesChannelId', 'value': hook.salesChannelContext.salesChannelId }
+] %}
+{% if rfCustomer is not null %}
+    {% set rfFilter = rfFilter|merge([{ 'type': 'equals', 'field': 'orderCustomer.customerId', 'value': rfCustomer.id }]) %}
+{% endif %}
+{% set rfOrder = services.repository.search('order', { 'ids': [rfOrderId], 'filter': rfFilter, 'associations': { 'orderCustomer': {} } }).first %}
+
+{% if rfOrder is null %}
+    {% do hook.setResponse(services.response.json({ 'success': false, 'error': 'order_not_found' }, 404)) %}
+    {% return %}
+{% endif %}
+
+{# Without a logged-in owner, answers only count for an order placed within the last two hours. #}
+{% if rfCustomer is null and rfNow - (rfOrder.createdAt|date('U')) > 7200 %}
+    {% do hook.setResponse(services.response.json({ 'success': false, 'error': 'answer_too_late' }, 403)) %}
+    {% return %}
+{% endif %}
+
+{% set rfStatus = (rfOrder.customFields ?? {})['reviewforest_tree_status'] ?? '' %}
+{% if rfStatus starts with 'planted' or rfStatus starts with 'not planted' %}
+    {% do hook.setResponse(services.response.json({ 'success': false, 'error': 'tree_final' }, 409)) %}
+    {% return %}
+{% endif %}
+
+{% set rfFirst = rfOrder.orderCustomer.firstName|default('')|trim %}
+{% set rfLast = rfOrder.orderCustomer.lastName|default('')|trim %}
+{% if rfChoice == 'name' %}
+    {% set rfName = (rfFirst ~ ' ' ~ rfLast)|trim %}
+{% elseif rfChoice == 'initials' %}
+    {% set rfName = ((rfFirst ? rfFirst|slice(0, 1)|upper ~ '.' : '') ~ ' ' ~ (rfLast ? rfLast|slice(0, 1)|upper ~ '.' : ''))|trim %}
+{% elseif rfChoice == 'dedication' %}
+    {% set rfName = rfDedication|striptags|replace({ "\n": ' ', "\r": ' ', "\t": ' ', '<': '', '>': '' })|trim|slice(0, 40)|trim %}
+{% else %}
+    {% set rfName = '' %}
+{% endif %}
+{% if rfChoice == 'dedication' and rfName is empty %}
+    {% do hook.setResponse(services.response.json({ 'success': false, 'error': 'dedication_empty' }, 400)) %}
+    {% return %}
+{% endif %}
+
+{% do services.writer.upsert('order', [{
+    'id': rfOrderId,
+    'customFields': {
+        'reviewforest_tree_choice': rfChoice,
+        'reviewforest_tree_name': rfName
+    }
+}]) %}
+
+{% if rfRedirect %}
+    {% do hook.setResponse(services.response.redirect('frontend.checkout.finish.page', { 'orderId': rfOrderId })) %}
+{% else %}
+    {% do hook.setResponse(services.response.json({ 'success': true, 'choice': rfChoice, 'name': rfName })) %}
+{% endif %}
