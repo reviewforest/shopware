@@ -297,8 +297,8 @@
                 <text name="reviewforest_tree_name">
                     <label>Tree name</label>
                     <label lang="de-DE">Name des Baums</label>
-                    <help-text>As chosen by the buyer. Changing it here does not rename a planted tree: rename it in ReviewForest.</help-text>
-                    <help-text lang="de-DE">Wie vom Käufer gewählt. Eine Änderung hier benennt einen gepflanzten Baum nicht um: das geht in ReviewForest.</help-text>
+                    <help-text>As chosen by the buyer. Changing it here does not rename a planted tree: rename it in ReviewForest under Trees.</help-text>
+                    <help-text lang="de-DE">Wie vom Käufer gewählt. Eine Änderung hier benennt einen gepflanzten Baum nicht um: das geht in ReviewForest unter Bäume.</help-text>
                     <position>10</position>
                 </text>
                 <single-select name="reviewforest_tree_status">
