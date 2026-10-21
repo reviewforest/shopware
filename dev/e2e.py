@@ -217,7 +217,10 @@ def main():
     channel_basic = admin.request('GET', f"/api/_action/system-config?domain=core.basicInformation&salesChannelId={order['salesChannelId']}")
     shop_email = next((str(value).strip() for value in (channel_basic.get('core.basicInformation.email'), basic.get('core.basicInformation.email'))
                        if isinstance(value, str) and value.strip()), '')
-    plain_address = re.fullmatch(r'[A-Za-z0-9_%+-]+(\.[A-Za-z0-9_%+-]+)*@([A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+([A-Za-z]{2,63}|xn--[A-Za-z0-9-]{1,59})', shop_email)
+    # Same rule as the API (shopReplyTo): ASCII dot-atom with the characters SendGrid documents, a real domain, length limits.
+    atext = r"[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]"
+    plain_address = (len(shop_email) <= 254 and len(shop_email.split('@')[0]) <= 64 and
+                     re.fullmatch(rf'{atext}+(\.{atext}+)*@([A-Za-z0-9]([A-Za-z0-9-]{{0,61}}[A-Za-z0-9])?\.)+([A-Za-z]{{2,63}}|xn--[A-Za-z0-9-]{{1,59}})', shop_email))
     reply_to = (payload.get('replyTo') or {}).get('email')
     check('replies go to the shop address from the basic information (none without a plain address)',
           reply_to == shop_email if plain_address else reply_to is None, f'{reply_to} / {shop_email}')
