@@ -8,6 +8,9 @@
 #}
 {% set rfOrder = page.order %}
 {% set rfTreeStatus = (rfOrder.customFields ?? {})['reviewforest_tree_status'] ?? '' %}
+{# Codes since 0.2.0; texts like "planted 2026-10-22" come from test installations before that. #}
+{% set rfTreePlanted = rfTreeStatus == 'planted' or rfTreeStatus starts with 'planted ' %}
+{% set rfTreeNotPlanted = rfTreeStatus == 'not_planted' or rfTreeStatus starts with 'not planted' %}
 {# A cancelled order gets no tree, so the buyer is not asked (and a reload after the cancellation shows nothing). #}
 {% set rfOrderCancelled = (rfOrder.stateMachineState.technicalName ?? '') == 'cancelled' %}
 {% set rfTreeSetting = config('ReviewForest.config.treePerOrderEnabled') %}
@@ -16,7 +19,7 @@
     and (rfTreeSetting is same as(true) or rfTreeSetting is same as('true') or rfTreeSetting is same as('1'))
     and not (rfAskName is same as(false) or rfAskName is same as('false') or rfAskName is same as('0'))
     and not rfOrderCancelled
-    and rfTreeStatus != 'not_planted' %}
+    and not rfTreeNotPlanted %}
     {% if context.languageInfo is defined and context.languageInfo %}
         {% set rfLocale = context.languageInfo.localeCode %}
     {% elseif page.header.activeLanguage.translationCode.code is defined %}
@@ -43,7 +46,7 @@
          data-error="{{ rfDe ? 'Das hat leider nicht geklappt. Bitte versuchen Sie es noch einmal.' : 'That did not work. Please try again.' }}">
         <div class="card-body">
             <div class="card-title">{{ rfDe ? 'Für Ihre Bestellung pflanzen wir einen Baum' : 'We plant a tree for your order' }}</div>
-            {% if rfTreeStatus == 'planted' %}
+            {% if rfTreePlanted %}
                 <p class="reviewforest-tree-result mb-0">
                     {{ rfDe ? 'Ihr Baum ist gepflanzt.' : 'Your tree has been planted.' }}
                     {% if rfName %}{{ rfDe ? 'Er trägt den Namen:' : 'Its name:' }} {{ rfName }}{% endif %}
@@ -54,14 +57,15 @@
                     <input type="hidden" name="deepLinkCode" value="{{ rfOrder.deepLinkCode }}">
                     <input type="hidden" name="redirect" value="1">
                     {% set rfShopOrDefault = rfShop ?: (rfDe ? 'diesem Shop' : 'this shop') %}
+                    {% set rfShopSubject = rfShop ?: (rfDe ? 'dieser Shop' : 'this shop') %}
                     {% set rfTrigger = config('ReviewForest.config.treeTrigger')|default('shipped') %}
                     {% set rfWhen = rfTrigger == 'paid'
                         ? (rfDe ? 'kurz nach Ihrer Zahlung' : 'shortly after your payment')
                         : (rfTrigger == 'completed' ? (rfDe ? 'kurz nach Abschluss der Bestellung' : 'shortly after the order is completed') : (rfDe ? 'kurz nach dem Versand' : 'shortly after shipping')) %}
                     <p>
                         {{ rfDe
-                            ? 'Wir pflanzen ihn ' ~ rfWhen ~ ', unabhängig von einer Bewertung. Er erscheint im Bewertungswald von ' ~ rfShopOrDefault ~ ', einer öffentlichen Seite mit allen Bäumen, die ' ~ rfShopOrDefault ~ ' gepflanzt hat. Wie soll Ihr Baum dort erscheinen?'
-                            : 'We plant it ' ~ rfWhen ~ ', whether or not you write a review. It appears in the review forest of ' ~ rfShopOrDefault ~ ', a public page with all trees ' ~ rfShopOrDefault ~ ' has planted. How should your tree appear there?' }}
+                            ? 'Wir pflanzen ihn ' ~ rfWhen ~ ', unabhängig von einer Bewertung. Er erscheint im Bewertungswald von ' ~ rfShopOrDefault ~ ', einer öffentlichen Seite mit allen Bäumen, die ' ~ rfShopSubject ~ ' gepflanzt hat. Wie soll Ihr Baum dort erscheinen?'
+                            : 'We plant it ' ~ rfWhen ~ ', whether or not you write a review. It appears in the review forest of ' ~ rfShopOrDefault ~ ', a public page with all trees ' ~ rfShopSubject ~ ' has planted. How should your tree appear there?' }}
                     </p>
                     <div class="form-check">
                         <input class="form-check-input" type="radio" name="treeChoice" value="none" id="reviewforest-tree-none"

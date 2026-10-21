@@ -50,7 +50,8 @@
 {% endif %}
 
 {% set rfStatus = (rfOrder.customFields ?? {})['reviewforest_tree_status'] ?? '' %}
-{% if rfStatus in ['planted', 'not_planted'] %}
+{# Codes since 0.2.0; texts like "planted 2026-10-22" come from test installations before that. #}
+{% if rfStatus in ['planted', 'not_planted'] or rfStatus starts with 'planted ' or rfStatus starts with 'not planted' %}
     {% do hook.setResponse(services.response.json({ 'success': false, 'error': 'tree_final' }, 409)) %}
     {% return %}
 {% endif %}

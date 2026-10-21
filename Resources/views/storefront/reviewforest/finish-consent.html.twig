@@ -10,7 +10,9 @@
 {% set rfOrder = page.order %}
 {% set rfGroupExcluded = context.currentCustomerGroup.id in (config('ReviewForest.config.excludedCustomerGroups')|default([])) %}
 {% set rfInvitations = config('ReviewForest.config.invitationsEnabled') %}
-{% if rfOrder and (rfInvitations is same as(true) or rfInvitations is same as('true') or rfInvitations is same as('1')) and not rfGroupExcluded %}
+{# The exclusion only stops new questions: a buyer who already answered keeps the withdrawal and the answer. #}
+{% set rfAnswered = rfOrder and ((rfOrder.customFields ?? {})['reviewforest_consent'] ?? null) is not null %}
+{% if rfOrder and (rfInvitations is same as(true) or rfInvitations is same as('true') or rfInvitations is same as('1')) and (not rfGroupExcluded or rfAnswered) %}
     {% set rfMode = config('ReviewForest.config.consentMode')|default('finish_dialog') %}
     {% set rfAnswer = (rfOrder.customFields ?? {})['reviewforest_consent'] ?? null %}
     {% if context.languageInfo is defined and context.languageInfo %}
