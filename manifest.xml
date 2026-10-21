@@ -10,8 +10,8 @@
         <name>ReviewForest</name>
         <label>ReviewForest: reviews that plant trees</label>
         <label lang="de-DE">ReviewForest: Bewertungen, die Bäume pflanzen</label>
-        <description>Shows your ReviewForest widgets on every page and invites buyers who agreed to leave a review a few days after shipping. A tree is planted for every review, and optionally for every order.</description>
-        <description lang="de-DE">Zeigt Ihre ReviewForest-Widgets auf allen Seiten und lädt Käufer, die zugestimmt haben, einige Tage nach dem Versand zu einer Bewertung ein. Für jede Bewertung wird ein Baum gepflanzt, auf Wunsch auch für jede Bestellung.</description>
+        <description>Shows your ReviewForest widgets on every page and invites buyers who agreed to a review a few days after shipping. A tree for every review, and optionally for every order.</description>
+        <description lang="de-DE">Zeigt Ihre ReviewForest-Widgets auf allen Seiten und lädt Käufer, die zugestimmt haben, nach dem Versand zu einer Bewertung ein. Ein Baum pro Bewertung, auf Wunsch pro Bestellung.</description>
         <author>ReviewForest GmbH</author>
         <copyright>(c) ReviewForest GmbH</copyright>
         <version>0.2.0</version>
