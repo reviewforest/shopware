@@ -275,8 +275,9 @@ def main():
     cancelled = wait_for(lambda: mongo(f"db.orderTrees.findOne({{externalRef: /{cancelled_id}/}})?.status") == 'cancelled')
     check('a cancelled order cancels its waiting tree', bool(cancelled))
 
-    # The daily run takes trees from before today (UTC), once per forest and day: move the tree to yesterday
-    # and forget earlier local runs, then the API's worker picks it up within seconds.
+    # The daily run takes trees from before today (UTC), once per forest and day, and never starts between
+    # 23:00 and 24:00 UTC: move the tree to yesterday and forget earlier local runs, then the API's worker
+    # picks it up within seconds (outside that last hour).
     mongo(f"db.orderTrees.updateOne({{externalRef: /{order_id}/}}, {{$set: {{createdAt: new Date(Date.now() - 864e5)}}}}); db.orderTreeRuns.deleteMany({{}})")
     final = wait_for(lambda: mongo(f"db.orderTrees.findOne({{externalRef: /{order_id}/}})?.status") in ('planted', 'failed', 'uncertain'), timeout=60)
     record = json.loads(mongo(f"JSON.stringify(db.orderTrees.findOne({{externalRef: /{order_id}/}}, {{status: 1, statusReason: 1}}))") or '{}')

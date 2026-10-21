@@ -3,7 +3,7 @@
     Stores how the buyer wants the order's tree to be named (tree per order) on the order (custom fields).
 
     Same protection as the consent answer: every request carries the order's deep link code, a logged-in
-    customer must own the order, and a logged-out guest can only answer within two hours after the order.
+    customer must own the order, and a guest can only answer within two hours after the order.
     The public name is built here from the order's customer name, never taken from the request. Only a
     dedication comes from the buyer; it is cut to one line of at most 40 characters here, and the ReviewForest
     API cleans it again before it orders the tree.
@@ -41,8 +41,8 @@
     {% return %}
 {% endif %}
 
-{# Without a logged-in owner, answers only count for an order placed within the last two hours. #}
-{% if rfCustomer is null and rfNow - (rfOrder.createdAt|date('U')) > 7200 %}
+{# Guests (logged out, or still in their guest session) can only answer within two hours after the order. #}
+{% if (rfCustomer is null or rfCustomer.guest) and rfNow - (rfOrder.createdAt|date('U')) > 7200 %}
     {% do hook.setResponse(services.response.json({ 'success': false, 'error': 'answer_too_late' }, 403)) %}
     {% return %}
 {% endif %}
