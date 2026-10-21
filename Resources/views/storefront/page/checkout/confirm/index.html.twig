@@ -3,10 +3,12 @@
 {#
     Optional consent checkbox (merchant setting "Checkbox in the checkout"). Never pre-checked and not
     required. The answer is stored by the app's script on the order once the order confirmation page loads.
+    Buyers in a customer group the merchant excluded from invitations are not asked at all.
 #}
 {% block page_checkout_confirm_tos %}
     {{ parent() }}
-    {% if config('ReviewForest.config.invitationsEnabled') and config('ReviewForest.config.consentMode') == 'checkout_checkbox' %}
+    {% set rfGroupExcluded = context.currentCustomerGroup.id in (config('ReviewForest.config.excludedCustomerGroups')|default([])) %}
+    {% if config('ReviewForest.config.invitationsEnabled') and config('ReviewForest.config.consentMode') == 'checkout_checkbox' and not rfGroupExcluded %}
         <div class="reviewforest-consent-checkbox form-check mb-4" data-reviewforest-checkbox data-cart-total="{{ page.cart.price.totalPrice }}">
             <input type="checkbox" class="form-check-input" id="reviewforestConsentCheckbox" data-reviewforest-checkbox-input>
             <label class="form-check-label" for="reviewforestConsentCheckbox">

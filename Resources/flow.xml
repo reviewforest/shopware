@@ -12,8 +12,8 @@
                 <badge>ReviewForest</badge>
                 <label>Schedule review invitation</label>
                 <label lang="de-DE">Bewertungseinladung einplanen</label>
-                <description>Sends a ReviewForest review invitation after the delay, if the buyer agreed.</description>
-                <description lang="de-DE">Verschickt nach der Wartezeit eine ReviewForest-Bewertungseinladung, wenn der Käufer zugestimmt hat.</description>
+                <description>Sends a ReviewForest review invitation after the delay, if the buyer agreed. The tone of the email and the excluded customer groups come from the app settings; an order gets at most one invitation.</description>
+                <description lang="de-DE">Verschickt nach der Wartezeit eine ReviewForest-Bewertungseinladung, wenn der Käufer zugestimmt hat. Ton der E-Mail und ausgeschlossene Kundengruppen kommen aus den App-Einstellungen; jede Bestellung bekommt höchstens eine Einladung.</description>
                 <url>http://host.docker.internal:3000/integrations/shopware/webhooks</url>
                 <sw-icon>regular-star</sw-icon>
                 <requirements>orderAware</requirements>

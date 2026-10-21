@@ -42,15 +42,15 @@
             <name>floatingWidgetId</name>
             <label>Floating badge: widget ID</label>
             <label lang="de-DE">Schwebendes Badge: Widget-ID</label>
-            <helpText>Shown on every page. Copy the ID from the embed code in ReviewForest (the part after reviewforest-app-).</helpText>
-            <helpText lang="de-DE">Erscheint auf jeder Seite. Die ID steht im Einbaucode in ReviewForest (der Teil nach reviewforest-app-).</helpText>
+            <helpText>Shown on every page. Paste the embed code from ReviewForest, or only the ID from it (the part after reviewforest-app-).</helpText>
+            <helpText lang="de-DE">Erscheint auf jeder Seite. Fügen Sie den Einbaucode aus ReviewForest ein oder nur die ID daraus (der Teil nach reviewforest-app-).</helpText>
         </input-field>
         <input-field type="text">
             <name>footerWidgetId</name>
             <label>Footer: widget ID</label>
             <label lang="de-DE">Fußzeile: Widget-ID</label>
-            <helpText>Shown in the footer of every page.</helpText>
-            <helpText lang="de-DE">Erscheint in der Fußzeile jeder Seite.</helpText>
+            <helpText>Shown in the footer of every page. Embed code or ID, as above.</helpText>
+            <helpText lang="de-DE">Erscheint in der Fußzeile jeder Seite. Einbaucode oder ID, wie oben.</helpText>
         </input-field>
         <input-field type="text">
             <name>additionalWidgetIds</name>
@@ -77,6 +77,8 @@
             <label>Start the delay when</label>
             <label lang="de-DE">Wartezeit beginnt, wenn</label>
             <defaultValue>shipped</defaultValue>
+            <helpText>With "one of my flows schedules it" nothing happens automatically: only your Flow Builder flows with the action "Schedule review invitation" invite, with the delay set in the action.</helpText>
+            <helpText lang="de-DE">Mit "ein eigener Flow sie einplant" passiert nichts automatisch: Nur Ihre Flows im Flow Builder mit der Aktion "Bewertungseinladung einplanen" laden ein, mit der Wartezeit aus der Aktion.</helpText>
             <options>
                 <option>
                     <id>shipped</id>
@@ -92,6 +94,11 @@
                     <id>completed</id>
                     <name>the order is completed</name>
                     <name lang="de-DE">die Bestellung abgeschlossen ist</name>
+                </option>
+                <option>
+                    <id>flow</id>
+                    <name>one of my flows schedules it (Flow Builder)</name>
+                    <name lang="de-DE">ein eigener Flow sie einplant (Flow Builder)</name>
                 </option>
             </options>
         </input-field>
@@ -160,6 +167,8 @@
             <entity>customer_group</entity>
             <label>Do not invite these customer groups</label>
             <label lang="de-DE">Diese Kundengruppen nicht einladen</label>
+            <helpText>Buyers in these groups are not asked for consent and get no invitation. Tree per order still applies to their orders.</helpText>
+            <helpText lang="de-DE">Käufer dieser Gruppen werden nicht nach ihrer Einwilligung gefragt und bekommen keine Einladung. Baum pro Bestellung gilt für ihre Bestellungen trotzdem.</helpText>
         </component>
     </card>
 

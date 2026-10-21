@@ -1,6 +1,8 @@
 {#
-    Widget IDs are UUIDs from the ReviewForest embed code. Anything else is ignored, so a typo in the
-    configuration can never inject markup. The footer widget is rendered by layout/footer/footer.html.twig.
+    Widget IDs are UUIDs from the ReviewForest embed code. Merchants may paste the whole embed code instead of
+    the ID: the part after "reviewforest-app-" is taken. Anything that is not a plain ID after that is ignored,
+    so a typo in the configuration can never inject markup. The footer widget is rendered by
+    layout/footer/footer.html.twig.
 #}
 {% set rfWidgetIds = [] %}
 {# No third-party widget script on checkout and account pages unless the merchant enables it; the cart counts as a shop page. #}
@@ -10,12 +12,12 @@
 {% if config('ReviewForest.config.widgetsEnabled') is not same as(false) and rfWidgetPageAllowed %}
     {% set rfCandidates = [config('ReviewForest.config.floatingWidgetId')|default('')]|merge(config('ReviewForest.config.additionalWidgetIds')|default('')|split(',')) %}
     {% for rfCandidate in rfCandidates %}
-        {% set rfId = rfCandidate|trim %}
+        {% set rfId = rfCandidate|trim|split('reviewforest-app-')|last|split('"')|first|split("'")|first|split('>')|first|trim|split(' ')|first %}
         {% if rfId matches '/^[A-Za-z0-9-]{8,64}$/' and rfId not in rfWidgetIds %}
             {% set rfWidgetIds = rfWidgetIds|merge([rfId]) %}
         {% endif %}
     {% endfor %}
-    {% set rfFooterWidgetId = config('ReviewForest.config.footerWidgetId')|default('')|trim %}
+    {% set rfFooterWidgetId = config('ReviewForest.config.footerWidgetId')|default('')|trim|split('reviewforest-app-')|last|split('"')|first|split("'")|first|split('>')|first|trim|split(' ')|first %}
     {% set rfHasFooter = rfFooterWidgetId matches '/^[A-Za-z0-9-]{8,64}$/' %}
     {% if rfWidgetIds is not empty or rfHasFooter %}
         {% for rfId in rfWidgetIds %}

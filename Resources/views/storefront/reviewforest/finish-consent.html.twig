@@ -5,9 +5,11 @@
     - Mode "checkout_checkbox": nothing is shown; the JavaScript sends the checkbox answer that was given
       on the confirm page for this order.
     The answer is written to the order custom fields by Resources/scripts/storefront-reviewforest-consent.
+    Buyers in a customer group the merchant excluded from invitations are not asked.
 #}
 {% set rfOrder = page.order %}
-{% if rfOrder and config('ReviewForest.config.invitationsEnabled') %}
+{% set rfGroupExcluded = context.currentCustomerGroup.id in (config('ReviewForest.config.excludedCustomerGroups')|default([])) %}
+{% if rfOrder and config('ReviewForest.config.invitationsEnabled') and not rfGroupExcluded %}
     {% set rfMode = config('ReviewForest.config.consentMode')|default('finish_dialog') %}
     {% set rfAnswer = (rfOrder.customFields ?? {})['reviewforest_consent'] ?? null %}
     {% if context.languageInfo is defined and context.languageInfo %}
