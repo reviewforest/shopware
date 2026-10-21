@@ -3,8 +3,8 @@
     shop's Bewertungswald (with name, initials, a dedication or without a name).
     Works without JavaScript (plain form post, the script endpoint redirects back here); with JavaScript the
     choice is sent in the background. The choice is written to the order custom fields by
-    Resources/scripts/storefront-reviewforest-tree; the ReviewForest API reads it in the daily run that orders
-    the trees.
+    Resources/scripts/storefront-reviewforest-tree; the ReviewForest API reads it in the run that orders the
+    trees (the next day, or with monthly billing at the start of the next month).
 #}
 {% set rfOrder = page.order %}
 {% set rfTreeStatus = (rfOrder.customFields ?? {})['reviewforest_tree_status'] ?? '' %}
@@ -59,9 +59,15 @@
                     {% set rfShopOrDefault = rfShop ?: (rfDe ? 'diesem Shop' : 'this shop') %}
                     {% set rfShopSubject = rfShop ?: (rfDe ? 'dieser Shop' : 'this shop') %}
                     {% set rfTrigger = config('ReviewForest.config.treeTrigger')|default('shipped') %}
-                    {% set rfWhen = rfTrigger == 'paid'
-                        ? (rfDe ? 'kurz nach Ihrer Zahlung' : 'shortly after your payment')
-                        : (rfTrigger == 'completed' ? (rfDe ? 'kurz nach Abschluss der Bestellung' : 'shortly after the order is completed') : (rfDe ? 'kurz nach dem Versand' : 'shortly after shipping')) %}
+                    {# RF-12250: with monthly billing the trees of a month are ordered at the start of the next month. #}
+                    {% set rfMonthly = config('ReviewForest.config.treeBilling') is same as('monthly') %}
+                    {% set rfWhen = rfMonthly
+                        ? (rfTrigger == 'paid'
+                            ? (rfDe ? 'zu Beginn des Monats nach Ihrer Zahlung' : 'at the start of the month after your payment')
+                            : (rfTrigger == 'completed' ? (rfDe ? 'zu Beginn des Monats nach Abschluss der Bestellung' : 'at the start of the month after the order is completed') : (rfDe ? 'zu Beginn des Monats nach dem Versand' : 'at the start of the month after shipping')))
+                        : (rfTrigger == 'paid'
+                            ? (rfDe ? 'kurz nach Ihrer Zahlung' : 'shortly after your payment')
+                            : (rfTrigger == 'completed' ? (rfDe ? 'kurz nach Abschluss der Bestellung' : 'shortly after the order is completed') : (rfDe ? 'kurz nach dem Versand' : 'shortly after shipping'))) %}
                     <p>
                         {{ rfDe
                             ? 'Wir pflanzen ihn ' ~ rfWhen ~ ', unabhängig von einer Bewertung. Er erscheint im Bewertungswald von ' ~ rfShopOrDefault ~ ', einer öffentlichen Seite mit allen Bäumen, die ' ~ rfShopSubject ~ ' gepflanzt hat. Wie soll Ihr Baum dort erscheinen?'

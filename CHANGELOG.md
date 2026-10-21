@@ -3,6 +3,8 @@
 ## 0.2.0 (unreleased)
 
 - Tree per order: every order that reaches the chosen state (shipped, paid or completed) gets a tree in your Bewertungswald. The trees of a day are ordered together once a day as additional trees, usually one invoice a day. Cancelled, returned or refunded orders get no tree.
+- Tree per order can be billed once a month instead of once a day (setting "Order and bill the trees"): the trees of a calendar month (UTC) are ordered together at the start of the next month, usually one invoice a month. The order confirmation page tells buyers when their tree is planted.
+- Optional monthly limit for tree per order ("At most this many trees per month"), per sales channel. Orders beyond it get no tree and show the reason "Monthly limit reached".
 - On the order confirmation page buyers choose how their tree appears: with their name, initials only, a dedication or without a name. The choice and the tree status are stored on the order.
 - The ReviewForest fields on the order show translated labels: status, reason and date of the invitation and of the tree, the buyer's answer and where it was given. Dates are shown in the merchant's time zone.
 - Invitation emails carry a subject with the shop name ("Ihre Bewertung für <Shop> pflanzt einen Baum").

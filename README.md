@@ -5,7 +5,7 @@ Shopware app (app system, no PHP in the shop) for Shopware 6.6 and 6.7, includin
 - **Widgets without code:** shows your ReviewForest widgets (floating badge, footer widget, more widget IDs) on every shop page, configurable per sales channel. Checkout and customer account pages stay free of the widget script unless you switch that on.
 - **Review invitations after shipping:** a set number of days after shipping (or payment, or completion) the buyer gets one review invitation, but only if they agreed.
 - **Consent:** either a question with "Yes, please" and "No, thanks" on the order confirmation page, or an unchecked checkbox in the checkout. Answer, time, source and text version are stored on the order.
-- **Tree per order (0.2.0):** every order that reaches the chosen state gets a tree in your Bewertungswald, ordered once a day as additional trees. Buyers choose on the order confirmation page whether the tree shows their name, their initials, a dedication or no name.
+- **Tree per order (0.2.0):** every order that reaches the chosen state gets a tree in your Bewertungswald, ordered as additional trees once a day or, if you prefer one invoice a month, once a month. An optional monthly limit caps the trees per sales channel. Buyers choose on the order confirmation page whether the tree shows their name, their initials, a dedication or no name.
 - **Safety nets:** cancelled, returned or refunded orders cancel the waiting invitation and tree; status, reason and date of both are shown on the order in the admin language; Flow Builder action "Schedule review invitation" for your own rules.
 
 The server side lives in the ReviewForest API (`/integrations/shopware/*`). This repository only contains what runs inside the shop.
@@ -23,8 +23,10 @@ The server side lives in the ReviewForest API (`/integrations/shopware/*`). This
 | How buyers agree | Question on the order confirmation page (default) or checkbox in the checkout. |
 | Own consent text | Optional, German and English; `{shop}` is replaced by the shop name. |
 | Do not invite these customer groups | For example B2B or marketplace customers. They are not asked for consent; tree per order still applies. |
-| Plant a tree for every order | Off by default. Each tree is an additional tree at your price for additional trees, ordered once a day. |
+| Plant a tree for every order | Off by default. Each tree is an additional tree at your price for additional trees. |
 | Plant the tree when | Shipped, paid or completed (default: shipped). |
+| Order and bill the trees | Once a day (default; usually one invoice per day with orders) or once a month: the trees of a calendar month (UTC) are ordered together at the start of the next month. |
+| At most this many trees per month | Optional; empty or 0 means no limit. Counted per sales channel, for the calendar month (UTC) in which the trees are ordered. Orders beyond the limit get no tree (reason "Monthly limit reached"). |
 | Let buyers name their tree | Name, initials, a dedication of at most 40 characters, or no name (default: on). |
 | Occasion shown with the tree | Optional, at most 100 characters (default: "Für eine Bestellung" / "For an order"). |
 

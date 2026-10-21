@@ -182,8 +182,8 @@
             <label>Plant a tree for every order</label>
             <label lang="de-DE">Für jede Bestellung einen Baum pflanzen</label>
             <defaultValue>false</defaultValue>
-            <helpText>Costs money: every tree is an additional tree in your Bewertungswald, at your price for additional trees (ReviewForest shows the price per tree when you plant additional trees there). The trees of a day are ordered together once a day, usually one invoice per day with orders. Example: 15 orders a day are about 450 trees a month. Cancelled, returned or refunded orders get no tree. Uses the API key and forest from "Connection".</helpText>
-            <helpText lang="de-DE">Kostet Geld: Jeder Baum ist ein zusätzlicher Baum in deinem Bewertungswald, zu deinem Preis für zusätzliche Bäume (den Preis pro Baum zeigt dir ReviewForest, wenn du dort zusätzliche Bäume pflanzt). Die Bäume eines Tages bestellen wir einmal täglich gesammelt, in der Regel eine Rechnung pro Tag mit Bestellungen. Beispiel: 15 Bestellungen am Tag sind etwa 450 Bäume im Monat. Stornierte, retournierte oder erstattete Bestellungen bekommen keinen Baum. Nutzt den API-Schlüssel und den Bewertungswald aus "Verbindung".</helpText>
+            <helpText>Costs money: every tree is an additional tree in your Bewertungswald, at your price for additional trees (ReviewForest shows the price per tree when you plant additional trees there). The trees are ordered together, as set under "Order and bill the trees": once a day (usually one invoice per day with orders) or once a month (usually one invoice at the start of the next month). Example: 15 orders a day are about 450 trees a month; "At most this many trees per month" sets a limit. Cancelled, returned or refunded orders get no tree. Uses the API key and forest from "Connection".</helpText>
+            <helpText lang="de-DE">Kostet Geld: Jeder Baum ist ein zusätzlicher Baum in deinem Bewertungswald, zu deinem Preis für zusätzliche Bäume (den Preis pro Baum zeigt dir ReviewForest, wenn du dort zusätzliche Bäume pflanzt). Wir bestellen die Bäume gesammelt, so wie unter "Bäume bestellen und abrechnen" eingestellt: einmal täglich (in der Regel eine Rechnung pro Tag mit Bestellungen) oder einmal im Monat (in der Regel eine Rechnung zu Beginn des nächsten Monats). Beispiel: 15 Bestellungen am Tag sind etwa 450 Bäume im Monat; mit "Höchstens so viele Bäume pro Monat" setzt du eine Grenze. Stornierte, retournierte oder erstattete Bestellungen bekommen keinen Baum. Nutzt den API-Schlüssel und den Bewertungswald aus "Verbindung".</helpText>
         </input-field>
         <input-field type="single-select">
             <name>treeTrigger</name>
@@ -208,6 +208,39 @@
                 </option>
             </options>
         </input-field>
+        <!--
+            RF-12250 tree billing: when the trees are ordered (one invoice a day or a month) and a monthly limit.
+            Read by the ReviewForest API (shopwareTreeService) and by finish-tree.html.twig (treeBilling).
+        -->
+        <input-field type="single-select">
+            <name>treeBilling</name>
+            <label>Order and bill the trees</label>
+            <label lang="de-DE">Bäume bestellen und abrechnen</label>
+            <defaultValue>daily</defaultValue>
+            <helpText>Daily: the trees of a day are ordered the next day, usually one invoice per day with orders. Monthly: the trees of a calendar month (UTC) are ordered together at the start of the next month, usually one invoice a month. A change applies from the next order of trees, also to trees that are already waiting.</helpText>
+            <helpText lang="de-DE">Täglich: Die Bäume eines Tages bestellen wir am nächsten Tag, in der Regel eine Rechnung pro Tag mit Bestellungen. Monatlich: Die Bäume eines Kalendermonats (UTC) bestellen wir gesammelt zu Beginn des nächsten Monats, in der Regel eine Rechnung im Monat. Eine Änderung gilt ab der nächsten Baumbestellung, auch für Bäume, die schon warten.</helpText>
+            <options>
+                <option>
+                    <id>daily</id>
+                    <name>once a day</name>
+                    <name lang="de-DE">einmal täglich</name>
+                </option>
+                <option>
+                    <id>monthly</id>
+                    <name>once a month (at the start of the next month)</name>
+                    <name lang="de-DE">einmal im Monat (zu Beginn des nächsten Monats)</name>
+                </option>
+            </options>
+        </input-field>
+        <input-field type="int">
+            <name>treeMonthlyLimit</name>
+            <label>At most this many trees per month</label>
+            <label lang="de-DE">Höchstens so viele Bäume pro Monat</label>
+            <min>0</min>
+            <helpText>Optional. Empty or 0: no limit. Applies to each sales channel on its own: in a calendar month (UTC) we order at most this many trees for its orders; with monthly billing the limit applies to the order of trees at the start of the month. Orders beyond the limit get no tree. The order then shows "Not planted" with the reason "Monthly limit reached".</helpText>
+            <helpText lang="de-DE">Optional. Leer oder 0: keine Grenze. Gilt für jeden Verkaufskanal einzeln: In einem Kalendermonat (UTC) bestellen wir höchstens so viele Bäume für seine Bestellungen; bei monatlicher Abrechnung gilt die Grenze für die Baumbestellung zu Beginn des Monats. Bestellungen über der Grenze bekommen keinen Baum. An der Bestellung steht dann "Nicht gepflanzt" mit dem Grund "Monatsgrenze erreicht".</helpText>
+        </input-field>
+        <!-- /RF-12250 tree billing -->
         <input-field type="bool">
             <name>treeAskName</name>
             <label>Let buyers name their tree</label>
