@@ -329,10 +329,19 @@
                     <label lang="de-DE">Baum gepflanzt am</label>
                     <position>12</position>
                 </datetime>
+                <!-- RF-12251: link to the planted tree, written by ReviewForest with the status "planted". -->
+                <text name="reviewforest_tree_url">
+                    <label>Link to the tree</label>
+                    <label lang="de-DE">Link zum Baum</label>
+                    <help-text>Set by ReviewForest once the tree is planted. You can send the link to the buyer: it opens the tree in your review forest.</help-text>
+                    <help-text lang="de-DE">Von ReviewForest gesetzt, sobald der Baum gepflanzt ist. Den Link kannst du dem Käufer schicken: er öffnet den Baum in deinem Bewertungswald.</help-text>
+                    <position>13</position>
+                </text>
+                <!-- RF-12251: position 13 to 14, so the link comes right after the planting date. -->
                 <single-select name="reviewforest_tree_reason">
                     <label>Reason (tree)</label>
                     <label lang="de-DE">Grund (Baum)</label>
-                    <position>13</position>
+                    <position>14</position>
                     <options>
                         <option value="trees_disabled">
                             <name>Tree per order switched off</name>

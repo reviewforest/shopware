@@ -5,7 +5,7 @@ Shopware app (app system, no PHP in the shop) for Shopware 6.6 and 6.7, includin
 - **Widgets without code:** shows your ReviewForest widgets (floating badge, footer widget, more widget IDs) on every shop page, configurable per sales channel. Checkout and customer account pages stay free of the widget script unless you switch that on.
 - **Review invitations after shipping:** a set number of days after shipping (or payment, or completion) the buyer gets one review invitation, but only if they agreed.
 - **Consent:** either a question with "Yes, please" and "No, thanks" on the order confirmation page, or an unchecked checkbox in the checkout. Answer, time, source and text version are stored on the order.
-- **Tree per order (0.2.0):** every order that reaches the chosen state gets a tree in your Bewertungswald, ordered once a day as additional trees. Buyers choose on the order confirmation page whether the tree shows their name, their initials, a dedication or no name.
+- **Tree per order (0.2.0):** every order that reaches the chosen state gets a tree in your Bewertungswald, ordered once a day as additional trees. Buyers choose on the order confirmation page whether the tree shows their name, their initials, a dedication or no name. The page links to your Bewertungswald, and a planted order gets the link to its tree ("Link zum Baum"), which you can send to the buyer.
 - **Safety nets:** cancelled, returned or refunded orders cancel the waiting invitation and tree; status, reason and date of both are shown on the order in the admin language; Flow Builder action "Schedule review invitation" for your own rules.
 
 The server side lives in the ReviewForest API (`/integrations/shopware/*`). This repository only contains what runs inside the shop.
@@ -49,6 +49,7 @@ Notes from the first run (October 2026):
 - MongoDB 8 refuses to start on Docker Desktop's Linux kernel 7.0.12 (SERVER-121912), so the dev setup uses MongoDB 7.
 - Shopware 6.6.10+ only lets apps call public HTTPS targets; `dev/sync-app.sh` allows the Docker host for the local API.
 - dockware runs no message consumer; webhooks and flow actions wait in the queue until `messenger:consume` runs (the e2e script does that).
+- The link to the Bewertungswald on the order confirmation page points to the API under the Docker host name of the development manifest, which a browser on the host cannot open; the e2e script calls the redirect on `localhost:3000` instead.
 
 ## Build and release
 
