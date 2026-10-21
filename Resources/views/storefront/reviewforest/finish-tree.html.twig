@@ -8,10 +8,13 @@
 #}
 {% set rfOrder = page.order %}
 {% set rfTreeStatus = (rfOrder.customFields ?? {})['reviewforest_tree_status'] ?? '' %}
+{# A cancelled order gets no tree, so the buyer is not asked (and a reload after the cancellation shows nothing). #}
+{% set rfOrderCancelled = (rfOrder.stateMachineState.technicalName ?? '') == 'cancelled' %}
 {% if rfOrder
     and config('ReviewForest.config.treePerOrderEnabled')
     and config('ReviewForest.config.treeAskName') is not same as(false)
-    and not (rfTreeStatus starts with 'not planted') %}
+    and not rfOrderCancelled
+    and rfTreeStatus != 'not_planted' %}
     {% if context.languageInfo is defined and context.languageInfo %}
         {% set rfLocale = context.languageInfo.localeCode %}
     {% elseif page.header.activeLanguage.translationCode.code is defined %}
@@ -38,7 +41,7 @@
          data-error="{{ rfDe ? 'Das hat leider nicht geklappt. Bitte versuchen Sie es noch einmal.' : 'That did not work. Please try again.' }}">
         <div class="card-body">
             <div class="card-title">{{ rfDe ? 'Für Ihre Bestellung pflanzen wir einen Baum' : 'We plant a tree for your order' }}</div>
-            {% if rfTreeStatus starts with 'planted' %}
+            {% if rfTreeStatus == 'planted' %}
                 <p class="reviewforest-tree-result mb-0">
                     {{ rfDe ? 'Ihr Baum ist gepflanzt.' : 'Your tree has been planted.' }}
                     {% if rfName %}{{ rfDe ? 'Er trägt den Namen:' : 'Its name:' }} {{ rfName }}{% endif %}
@@ -48,12 +51,15 @@
                     <input type="hidden" name="orderId" value="{{ rfOrder.id }}">
                     <input type="hidden" name="deepLinkCode" value="{{ rfOrder.deepLinkCode }}">
                     <input type="hidden" name="redirect" value="1">
+                    {% set rfShopOrDefault = rfShop ?: (rfDe ? 'diesem Shop' : 'this shop') %}
+                    {% set rfTrigger = config('ReviewForest.config.treeTrigger')|default('shipped') %}
+                    {% set rfWhen = rfTrigger == 'paid'
+                        ? (rfDe ? 'kurz nach Ihrer Zahlung' : 'shortly after your payment')
+                        : (rfTrigger == 'completed' ? (rfDe ? 'kurz nach Abschluss der Bestellung' : 'shortly after the order is completed') : (rfDe ? 'kurz nach dem Versand' : 'shortly after shipping')) %}
                     <p>
-                        {% if rfShop %}
-                            {{ rfDe ? 'Wie soll er im Bewertungswald von ' ~ rfShop ~ ' erscheinen?' : 'How should it appear in the review forest of ' ~ rfShop ~ '?' }}
-                        {% else %}
-                            {{ rfDe ? 'Wie soll er im Bewertungswald erscheinen?' : 'How should it appear in the review forest?' }}
-                        {% endif %}
+                        {{ rfDe
+                            ? 'Wir pflanzen ihn ' ~ rfWhen ~ ', unabhängig von einer Bewertung. Er erscheint im Bewertungswald von ' ~ rfShopOrDefault ~ ', einer öffentlichen Seite mit allen Bäumen, die ' ~ rfShopOrDefault ~ ' gepflanzt hat. Wie soll Ihr Baum dort erscheinen?'
+                            : 'We plant it ' ~ rfWhen ~ ', whether or not you write a review. It appears in the review forest of ' ~ rfShopOrDefault ~ ', a public page with all trees ' ~ rfShopOrDefault ~ ' has planted. How should your tree appear there?' }}
                     </p>
                     <div class="form-check">
                         <input class="form-check-input" type="radio" name="treeChoice" value="none" id="reviewforest-tree-none"
@@ -77,13 +83,13 @@
                     <div class="form-check">
                         <input class="form-check-input" type="radio" name="treeChoice" value="dedication" id="reviewforest-tree-dedication"
                                {% if rfChoice == 'dedication' %}checked{% endif %}>
-                        <label class="form-check-label" for="reviewforest-tree-dedication">{{ rfDe ? 'Mit einer Widmung:' : 'With a dedication:' }}</label>
+                        <label class="form-check-label" for="reviewforest-tree-dedication">{{ rfDe ? 'Mit einer Widmung (höchstens 40 Zeichen):' : 'With a dedication (at most 40 characters):' }}</label>
                         <input class="form-control mt-1" type="text" name="dedication" maxlength="40"
                                aria-label="{{ rfDe ? 'Widmung' : 'Dedication' }}"
                                placeholder="{{ rfDe ? 'zum Beispiel: Für Oma Erna' : 'for example: For grandma Erna' }}"
                                value="{{ rfChoice == 'dedication' ? rfName : '' }}">
                     </div>
-                    <p class="text-muted small mt-2">{{ rfDe ? 'Name oder Widmung sind im Bewertungswald öffentlich zu sehen.' : 'The name or dedication is shown publicly in the review forest.' }}</p>
+                    <p class="text-muted small mt-2">{{ rfDe ? 'Name oder Widmung sind dort öffentlich zu sehen. Ihre Wahl können Sie hier bis zu zwei Stunden nach der Bestellung ändern.' : 'The name or dedication is shown publicly there. You can change your choice here for up to two hours after the order.' }}</p>
                     <div class="d-flex flex-wrap align-items-center gap-2">
                         <button type="submit" class="btn btn-outline-primary">{{ rfDe ? 'Speichern' : 'Save' }}</button>
                         <span class="reviewforest-tree-result" aria-live="polite">

@@ -202,7 +202,10 @@ def main():
     else:
         check('shipped schedules one invitation', False, 'no job')
     status_field = wait_for(lambda: (admin.search('order', {'ids': [order_id]})[0].get('customFields') or {}).get('reviewforest_invitation_status'))
-    check('invitation status written to the order', str(status_field).startswith('scheduled for'), str(status_field))
+    custom = admin.search('order', {'ids': [order_id]})[0].get('customFields') or {}
+    check('invitation status written to the order', status_field == 'scheduled' and bool(custom.get('reviewforest_invitation_date')), json.dumps(custom))
+    subject = mongo(f"db.invitationJobs.findOne({{externalRef: /{order_id}/}}).payload.subject")
+    check('the invitation subject names the shop', subject.startswith(('Ihre Bewertung für ', 'Deine Bewertung für ', 'Your review for ')), subject)
 
     # 4. cancelled -> cancelled
     admin.request('POST', f'/api/_action/order/{order_id}/state/cancel')
@@ -221,7 +224,8 @@ def main():
     consume_queue(args.port)
     status_field = wait_for(lambda: (admin.search('order', {'ids': [order_id]})[0].get('customFields') or {}).get('reviewforest_invitation_status'))
     jobs = int(mongo(f"db.invitationJobs.countDocuments({{externalRef: /{order_id}/}})"))
-    check('no consent schedules nothing', jobs == 0 and 'no consent' in str(status_field), str(status_field))
+    reason = (admin.search('order', {'ids': [order_id]})[0].get('customFields') or {}).get('reviewforest_invitation_reason')
+    check('no consent schedules nothing', jobs == 0 and status_field == 'not_scheduled' and reason == 'no_consent', f'{status_field} {reason}')
 
     # 6. withdrawal: yes, then withdrawn -> the waiting invitation is skipped at due time
     order_id, finish_html = place_guest_order(shop, product['id'], f'e2e-withdraw-{run}@example.com')
@@ -260,7 +264,7 @@ def main():
     consume_queue(args.port)
     tree = wait_for(lambda: mongo(f"db.orderTrees.findOne({{externalRef: /{order_id}/}})?.status") == 'pending')
     tree_status = (admin.search('order', {'ids': [order_id]})[0].get('customFields') or {}).get('reviewforest_tree_status')
-    check('shipped adds one tree for the next daily run', bool(tree) and str(tree_status).startswith('pending'), str(tree_status))
+    check('shipped adds one tree for the next daily run', bool(tree) and tree_status == 'pending', str(tree_status))
     admin.request('POST', f"/api/_action/order_delivery/{order['deliveries'][0]['id']}/state/ship")
     consume_queue(args.port)
     check('a repeated webhook adds no second tree', mongo(f"db.orderTrees.countDocuments({{externalRef: /{order_id}/}})") == '1')
@@ -273,7 +277,10 @@ def main():
     admin.request('POST', f'/api/_action/order/{cancelled_id}/state/cancel')
     consume_queue(args.port)
     cancelled = wait_for(lambda: mongo(f"db.orderTrees.findOne({{externalRef: /{cancelled_id}/}})?.status") == 'cancelled')
-    check('a cancelled order cancels its waiting tree', bool(cancelled))
+    custom = wait_for(lambda: (lambda c: c if c.get('reviewforest_tree_status') == 'not_planted' else None)(
+        admin.search('order', {'ids': [cancelled_id]})[0].get('customFields') or {}))
+    check('a cancelled order cancels its waiting tree', bool(cancelled) and bool(custom) and custom.get('reviewforest_tree_reason') == 'order_cancelled',
+          json.dumps(custom or {}))
 
     # The daily run takes trees from before today (UTC), once per forest and day, and never starts between
     # 23:00 and 24:00 UTC: move the tree to yesterday and forget earlier local runs, then the API's worker
@@ -281,7 +288,7 @@ def main():
     mongo(f"db.orderTrees.updateOne({{externalRef: /{order_id}/}}, {{$set: {{createdAt: new Date(Date.now() - 864e5)}}}}); db.orderTreeRuns.deleteMany({{}})")
     final = wait_for(lambda: mongo(f"db.orderTrees.findOne({{externalRef: /{order_id}/}})?.status") in ('planted', 'failed', 'uncertain'), timeout=60)
     record = json.loads(mongo(f"JSON.stringify(db.orderTrees.findOne({{externalRef: /{order_id}/}}, {{status: 1, statusReason: 1}}))") or '{}')
-    reported = wait_for(lambda: not str((admin.search('order', {'ids': [order_id]})[0].get('customFields') or {}).get('reviewforest_tree_status')).startswith('pending'))
+    reported = wait_for(lambda: (admin.search('order', {'ids': [order_id]})[0].get('customFields') or {}).get('reviewforest_tree_status') not in (None, 'pending'))
     tree_status = (admin.search('order', {'ids': [order_id]})[0].get('customFields') or {}).get('reviewforest_tree_status')
     # 'order_rejected' means the shop check passed and the run reached the billing code, which stops locally
     # because the dev database has no Stripe products. With real Stripe test data the status is 'planted'.

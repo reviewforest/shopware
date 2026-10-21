@@ -5,7 +5,8 @@ Shopware app (app system, no PHP in the shop) for Shopware 6.6 and 6.7, includin
 - **Widgets without code:** shows your ReviewForest widgets (floating badge, footer widget, more widget IDs) on every shop page, configurable per sales channel. Checkout and customer account pages stay free of the widget script unless you switch that on.
 - **Review invitations after shipping:** a set number of days after shipping (or payment, or completion) the buyer gets one review invitation, but only if they agreed.
 - **Consent:** either a question with "Yes, please" and "No, thanks" on the order confirmation page, or an unchecked checkbox in the checkout. Answer, time, source and text version are stored on the order.
-- **Safety nets:** cancelled, returned or refunded orders cancel the waiting invitation; the invitation status is shown on the order; Flow Builder action "Schedule review invitation" for your own rules.
+- **Tree per order (0.2.0):** every order that reaches the chosen state gets a tree in your Bewertungswald, ordered once a day as additional trees. Buyers choose on the order confirmation page whether the tree shows their name, their initials, a dedication or no name.
+- **Safety nets:** cancelled, returned or refunded orders cancel the waiting invitation and tree; status, reason and date of both are shown on the order in the admin language; Flow Builder action "Schedule review invitation" for your own rules.
 
 The server side lives in the ReviewForest API (`/integrations/shopware/*`). This repository only contains what runs inside the shop.
 
@@ -13,15 +14,19 @@ The server side lives in the ReviewForest API (`/integrations/shopware/*`). This
 
 | Setting | Meaning |
 |---|---|
-| ReviewForest API key | Read-write key from ReviewForest (Integrations, API). Needed for invitations only. |
+| ReviewForest API key | Read-write key from ReviewForest (Integrations, API). Needed for invitations and tree per order. |
 | Forest ID | The Bewertungswald that receives this sales channel's invitations. |
-| Widget IDs | The part after `reviewforest-app-` in the embed code. |
+| Widget IDs | The part after `reviewforest-app-` in the embed code, or the whole embed code. |
 | Send review invitations | Off by default. |
-| Start the delay when / Delay in days | Shipped, paid or completed; 1 to 60 days (default: shipped, 7). |
+| Start the delay when / Delay in days | Shipped, paid or completed, or only through your Flow Builder flows; 1 to 60 days (default: shipped, 7). |
 | Style of the email | Formal or friendly. |
 | How buyers agree | Question on the order confirmation page (default) or checkbox in the checkout. |
 | Own consent text | Optional, German and English; `{shop}` is replaced by the shop name. |
-| Do not invite these customer groups | For example B2B or marketplace customers. |
+| Do not invite these customer groups | For example B2B or marketplace customers. They are not asked for consent; tree per order still applies. |
+| Plant a tree for every order | Off by default. Each tree is an additional tree at your price for additional trees, ordered once a day. |
+| Plant the tree when | Shipped, paid or completed (default: shipped). |
+| Let buyers name their tree | Name, initials, a dedication of at most 40 characters, or no name (default: on). |
+| Occasion shown with the tree | Optional, at most 100 characters (default: "Für eine Bestellung" / "For an order"). |
 
 ## Development
 

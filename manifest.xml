@@ -48,26 +48,52 @@
                 <order/>
             </related-entities>
             <fields>
-                <text name="reviewforest_consent">
+                <!--
+                    The consent fields are the buyer's record: written by the storefront scripts, read by ReviewForest
+                    before every invitation. Select fields show readable labels while the stored values stay the same.
+                -->
+                <single-select name="reviewforest_consent">
                     <label>Review invitation consent</label>
                     <label lang="de-DE">Einwilligung Bewertungseinladung</label>
-                    <help-text>yes or no, set by the buyer on the order confirmation page or in the checkout.</help-text>
-                    <help-text lang="de-DE">yes oder no, gesetzt durch den Käufer auf der Bestellbestätigung oder im Checkout.</help-text>
+                    <help-text>The buyer's answer. Record of the consent: please do not change it by hand.</help-text>
+                    <help-text lang="de-DE">Die Antwort des Käufers. Nachweis der Einwilligung: bitte nicht von Hand ändern.</help-text>
                     <position>1</position>
-                </text>
+                    <options>
+                        <option value="yes">
+                            <name>Yes, agreed</name>
+                            <name lang="de-DE">Ja, zugestimmt</name>
+                        </option>
+                        <option value="no">
+                            <name>No, declined</name>
+                            <name lang="de-DE">Nein, abgelehnt</name>
+                        </option>
+                    </options>
+                </single-select>
                 <datetime name="reviewforest_consent_at">
-                    <label>Consent given at</label>
-                    <label lang="de-DE">Einwilligung erteilt am</label>
+                    <label>Answer received at</label>
+                    <label lang="de-DE">Antwort erhalten am</label>
                     <position>2</position>
                 </datetime>
-                <text name="reviewforest_consent_source">
-                    <label>Consent source</label>
-                    <label lang="de-DE">Quelle der Einwilligung</label>
+                <single-select name="reviewforest_consent_source">
+                    <label>Where the buyer answered</label>
+                    <label lang="de-DE">Wo der Käufer geantwortet hat</label>
                     <position>3</position>
-                </text>
+                    <options>
+                        <option value="finish_dialog">
+                            <name>Question on the order confirmation page</name>
+                            <name lang="de-DE">Frage auf der Bestellbestätigung</name>
+                        </option>
+                        <option value="checkout_checkbox">
+                            <name>Checkbox in the checkout</name>
+                            <name lang="de-DE">Checkbox im Checkout</name>
+                        </option>
+                    </options>
+                </single-select>
                 <text name="reviewforest_consent_text">
                     <label>Consent text version</label>
                     <label lang="de-DE">Version des Einwilligungstexts</label>
+                    <help-text>Which text the buyer saw, for example rf-de-2026-10-v1: the German text of ReviewForest from October 2026.</help-text>
+                    <help-text lang="de-DE">Welchen Text der Käufer gesehen hat, zum Beispiel rf-de-2026-10-v1: der deutsche Text von ReviewForest vom Oktober 2026.</help-text>
                     <position>4</position>
                 </text>
                 <datetime name="reviewforest_consent_withdrawn_at">
@@ -75,28 +101,341 @@
                     <label lang="de-DE">Einwilligung widerrufen am</label>
                     <position>5</position>
                 </datetime>
-                <text name="reviewforest_invitation_status">
+                <!--
+                    Status fields, written by the ReviewForest API. Status and reason are codes, shown translated by
+                    Shopware; keep the options in sync with the reason lists of the API (shopwareInvitationService,
+                    shopwareTreeService). Codes the API does not know here are written as "other".
+                -->
+                <single-select name="reviewforest_invitation_status">
                     <label>Review invitation status</label>
                     <label lang="de-DE">Status der Bewertungseinladung</label>
                     <position>6</position>
-                </text>
-                <text name="reviewforest_tree_choice">
-                    <label>Tree name choice</label>
-                    <label lang="de-DE">Wahl für den Baumnamen</label>
-                    <help-text>name, initials, dedication or none, chosen by the buyer on the order confirmation page.</help-text>
-                    <help-text lang="de-DE">name, initials, dedication oder none, gewählt vom Käufer auf der Bestellbestätigung.</help-text>
+                    <options>
+                        <option value="scheduled">
+                            <name>Scheduled</name>
+                            <name lang="de-DE">Geplant</name>
+                        </option>
+                        <option value="sent">
+                            <name>Sent</name>
+                            <name lang="de-DE">Verschickt</name>
+                        </option>
+                        <option value="not_scheduled">
+                            <name>Not scheduled</name>
+                            <name lang="de-DE">Nicht geplant</name>
+                        </option>
+                        <option value="cancelled">
+                            <name>Cancelled</name>
+                            <name lang="de-DE">Storniert</name>
+                        </option>
+                        <option value="skipped">
+                            <name>Not sent</name>
+                            <name lang="de-DE">Nicht verschickt</name>
+                        </option>
+                        <option value="failed">
+                            <name>Failed</name>
+                            <name lang="de-DE">Fehlgeschlagen</name>
+                        </option>
+                        <option value="uncertain">
+                            <name>Being checked by ReviewForest</name>
+                            <name lang="de-DE">Wird von ReviewForest geprüft</name>
+                        </option>
+                    </options>
+                </single-select>
+                <datetime name="reviewforest_invitation_date">
+                    <label>Invitation scheduled for, or sent on</label>
+                    <label lang="de-DE">Einladung geplant für oder verschickt am</label>
                     <position>7</position>
-                </text>
+                </datetime>
+                <single-select name="reviewforest_invitation_reason">
+                    <label>Reason (invitation)</label>
+                    <label lang="de-DE">Grund (Einladung)</label>
+                    <position>8</position>
+                    <options>
+                        <option value="no_consent">
+                            <name>No consent from the buyer</name>
+                            <name lang="de-DE">Keine Einwilligung des Käufers</name>
+                        </option>
+                        <option value="customer_group_excluded">
+                            <name>Customer group excluded</name>
+                            <name lang="de-DE">Kundengruppe ausgeschlossen</name>
+                        </option>
+                        <option value="no_email">
+                            <name>No email address</name>
+                            <name lang="de-DE">Keine E-Mail-Adresse</name>
+                        </option>
+                        <option value="invitations_disabled">
+                            <name>Invitations switched off</name>
+                            <name lang="de-DE">Einladungen ausgeschaltet</name>
+                        </option>
+                        <option value="trigger_state_changed">
+                            <name>Order status was reset</name>
+                            <name lang="de-DE">Status der Bestellung zurückgesetzt</name>
+                        </option>
+                        <option value="recipient_changed">
+                            <name>Email address of the order changed</name>
+                            <name lang="de-DE">E-Mail-Adresse der Bestellung geändert</name>
+                        </option>
+                        <option value="unsubscribed">
+                            <name>Buyer unsubscribed from invitations</name>
+                            <name lang="de-DE">Käufer hat Einladungen abbestellt</name>
+                        </option>
+                        <option value="recently_invited">
+                            <name>Buyer was invited recently</name>
+                            <name lang="de-DE">Käufer wurde vor Kurzem schon eingeladen</name>
+                        </option>
+                        <option value="order_cancelled">
+                            <name>Order cancelled</name>
+                            <name lang="de-DE">Bestellung storniert</name>
+                        </option>
+                        <option value="order_returned">
+                            <name>Order returned</name>
+                            <name lang="de-DE">Bestellung retourniert</name>
+                        </option>
+                        <option value="order_refunded">
+                            <name>Order refunded</name>
+                            <name lang="de-DE">Bestellung erstattet</name>
+                        </option>
+                        <option value="order_not_found">
+                            <name>Order not found</name>
+                            <name lang="de-DE">Bestellung nicht gefunden</name>
+                        </option>
+                        <option value="api_key_missing">
+                            <name>API key missing in the app settings</name>
+                            <name lang="de-DE">API-Schlüssel fehlt in den App-Einstellungen</name>
+                        </option>
+                        <option value="api_key_invalid">
+                            <name>API key not valid</name>
+                            <name lang="de-DE">API-Schlüssel ungültig</name>
+                        </option>
+                        <option value="api_key_read_only">
+                            <name>API key can only read</name>
+                            <name lang="de-DE">API-Schlüssel nur mit Leserechten</name>
+                        </option>
+                        <option value="forest_id_invalid">
+                            <name>Forest ID not valid</name>
+                            <name lang="de-DE">ID des Bewertungswalds ungültig</name>
+                        </option>
+                        <option value="forest_not_in_account">
+                            <name>Forest does not belong to the API key</name>
+                            <name lang="de-DE">Bewertungswald gehört nicht zum API-Schlüssel</name>
+                        </option>
+                        <option value="account_changed">
+                            <name>Other ReviewForest account set up</name>
+                            <name lang="de-DE">Anderes ReviewForest-Konto eingestellt</name>
+                        </option>
+                        <option value="forest_missing">
+                            <name>Forest not found</name>
+                            <name lang="de-DE">Bewertungswald nicht gefunden</name>
+                        </option>
+                        <option value="forest_inactive">
+                            <name>Forest not active</name>
+                            <name lang="de-DE">Bewertungswald nicht aktiv</name>
+                        </option>
+                        <option value="shop_not_connected">
+                            <name>App was not active</name>
+                            <name lang="de-DE">App war nicht aktiv</name>
+                        </option>
+                        <option value="app_reinstalled">
+                            <name>App installed again</name>
+                            <name lang="de-DE">App neu installiert</name>
+                        </option>
+                        <option value="app_removed">
+                            <name>App removed</name>
+                            <name lang="de-DE">App entfernt</name>
+                        </option>
+                        <option value="shop_auth_failed">
+                            <name>No access to the shop</name>
+                            <name lang="de-DE">Kein Zugriff auf den Shop</name>
+                        </option>
+                        <option value="shop_url_blocked">
+                            <name>Shop address not allowed</name>
+                            <name lang="de-DE">Shop-Adresse nicht erlaubt</name>
+                        </option>
+                        <option value="send_rejected">
+                            <name>Sending was rejected</name>
+                            <name lang="de-DE">Versand abgelehnt</name>
+                        </option>
+                        <option value="send_error">
+                            <name>Error while sending</name>
+                            <name lang="de-DE">Fehler beim Versand</name>
+                        </option>
+                        <option value="send_uncertain">
+                            <name>Unclear whether it was sent, ReviewForest checks</name>
+                            <name lang="de-DE">Versand unklar, ReviewForest prüft</name>
+                        </option>
+                        <option value="other">
+                            <name>Other reason</name>
+                            <name lang="de-DE">Anderer Grund</name>
+                        </option>
+                    </options>
+                </single-select>
+                <single-select name="reviewforest_tree_choice">
+                    <label>How the tree appears</label>
+                    <label lang="de-DE">So erscheint der Baum</label>
+                    <help-text>Chosen by the buyer on the order confirmation page.</help-text>
+                    <help-text lang="de-DE">Vom Käufer auf der Bestellbestätigung gewählt.</help-text>
+                    <position>9</position>
+                    <options>
+                        <option value="none">
+                            <name>Without a name</name>
+                            <name lang="de-DE">Ohne Namen</name>
+                        </option>
+                        <option value="name">
+                            <name>With the buyer's name</name>
+                            <name lang="de-DE">Mit dem Namen des Käufers</name>
+                        </option>
+                        <option value="initials">
+                            <name>With the buyer's initials</name>
+                            <name lang="de-DE">Mit den Initialen des Käufers</name>
+                        </option>
+                        <option value="dedication">
+                            <name>With a dedication</name>
+                            <name lang="de-DE">Mit einer Widmung</name>
+                        </option>
+                    </options>
+                </single-select>
                 <text name="reviewforest_tree_name">
                     <label>Tree name</label>
                     <label lang="de-DE">Name des Baums</label>
-                    <position>8</position>
+                    <help-text>As chosen by the buyer. Changing it here does not rename a planted tree: rename it in ReviewForest.</help-text>
+                    <help-text lang="de-DE">Wie vom Käufer gewählt. Eine Änderung hier benennt einen gepflanzten Baum nicht um: das geht in ReviewForest.</help-text>
+                    <position>10</position>
                 </text>
-                <text name="reviewforest_tree_status">
+                <single-select name="reviewforest_tree_status">
                     <label>Tree status</label>
                     <label lang="de-DE">Status des Baums</label>
-                    <position>9</position>
-                </text>
+                    <position>11</position>
+                    <options>
+                        <option value="pending">
+                            <name>Planted with the next daily order of trees</name>
+                            <name lang="de-DE">Wird mit der nächsten täglichen Baumbestellung gepflanzt</name>
+                        </option>
+                        <option value="planted">
+                            <name>Planted</name>
+                            <name lang="de-DE">Gepflanzt</name>
+                        </option>
+                        <option value="not_planted">
+                            <name>Not planted</name>
+                            <name lang="de-DE">Nicht gepflanzt</name>
+                        </option>
+                        <option value="checking">
+                            <name>Being checked by ReviewForest</name>
+                            <name lang="de-DE">Wird von ReviewForest geprüft</name>
+                        </option>
+                    </options>
+                </single-select>
+                <datetime name="reviewforest_tree_date">
+                    <label>Tree planted on</label>
+                    <label lang="de-DE">Baum gepflanzt am</label>
+                    <position>12</position>
+                </datetime>
+                <single-select name="reviewforest_tree_reason">
+                    <label>Reason (tree)</label>
+                    <label lang="de-DE">Grund (Baum)</label>
+                    <position>13</position>
+                    <options>
+                        <option value="trees_disabled">
+                            <name>Tree per order switched off</name>
+                            <name lang="de-DE">Baum pro Bestellung ausgeschaltet</name>
+                        </option>
+                        <option value="order_cancelled">
+                            <name>Order cancelled</name>
+                            <name lang="de-DE">Bestellung storniert</name>
+                        </option>
+                        <option value="order_returned">
+                            <name>Order returned</name>
+                            <name lang="de-DE">Bestellung retourniert</name>
+                        </option>
+                        <option value="order_refunded">
+                            <name>Order refunded</name>
+                            <name lang="de-DE">Bestellung erstattet</name>
+                        </option>
+                        <option value="order_not_found">
+                            <name>Order not found</name>
+                            <name lang="de-DE">Bestellung nicht gefunden</name>
+                        </option>
+                        <option value="api_key_missing">
+                            <name>API key missing in the app settings</name>
+                            <name lang="de-DE">API-Schlüssel fehlt in den App-Einstellungen</name>
+                        </option>
+                        <option value="api_key_invalid">
+                            <name>API key not valid</name>
+                            <name lang="de-DE">API-Schlüssel ungültig</name>
+                        </option>
+                        <option value="api_key_read_only">
+                            <name>API key can only read</name>
+                            <name lang="de-DE">API-Schlüssel nur mit Leserechten</name>
+                        </option>
+                        <option value="forest_id_invalid">
+                            <name>Forest ID not valid</name>
+                            <name lang="de-DE">ID des Bewertungswalds ungültig</name>
+                        </option>
+                        <option value="forest_not_in_account">
+                            <name>Forest does not belong to the API key</name>
+                            <name lang="de-DE">Bewertungswald gehört nicht zum API-Schlüssel</name>
+                        </option>
+                        <option value="account_changed">
+                            <name>Other ReviewForest account set up</name>
+                            <name lang="de-DE">Anderes ReviewForest-Konto eingestellt</name>
+                        </option>
+                        <option value="forest_missing">
+                            <name>Forest not found</name>
+                            <name lang="de-DE">Bewertungswald nicht gefunden</name>
+                        </option>
+                        <option value="forest_inactive">
+                            <name>Forest not active</name>
+                            <name lang="de-DE">Bewertungswald nicht aktiv</name>
+                        </option>
+                        <option value="shop_not_connected">
+                            <name>App was not active</name>
+                            <name lang="de-DE">App war nicht aktiv</name>
+                        </option>
+                        <option value="app_reinstalled">
+                            <name>App installed again</name>
+                            <name lang="de-DE">App neu installiert</name>
+                        </option>
+                        <option value="app_removed">
+                            <name>App removed</name>
+                            <name lang="de-DE">App entfernt</name>
+                        </option>
+                        <option value="shop_auth_failed">
+                            <name>No access to the shop</name>
+                            <name lang="de-DE">Kein Zugriff auf den Shop</name>
+                        </option>
+                        <option value="shop_url_blocked">
+                            <name>Shop address not allowed</name>
+                            <name lang="de-DE">Shop-Adresse nicht erlaubt</name>
+                        </option>
+                        <option value="brand_forest">
+                            <name>Brand forests take no additional trees</name>
+                            <name lang="de-DE">Markenwald nimmt keine zusätzlichen Bäume</name>
+                        </option>
+                        <option value="no_billing">
+                            <name>No billing details in ReviewForest</name>
+                            <name lang="de-DE">Keine Zahlungsdaten in ReviewForest</name>
+                        </option>
+                        <option value="no_planting_project">
+                            <name>No planting project chosen</name>
+                            <name lang="de-DE">Kein Pflanzprojekt gewählt</name>
+                        </option>
+                        <option value="order_rejected">
+                            <name>Order of the trees rejected</name>
+                            <name lang="de-DE">Bestellung der Bäume abgelehnt</name>
+                        </option>
+                        <option value="billing_uncertain">
+                            <name>Billing unclear, ReviewForest checks</name>
+                            <name lang="de-DE">Abrechnung unklar, ReviewForest prüft</name>
+                        </option>
+                        <option value="interrupted">
+                            <name>Daily order interrupted, ReviewForest checks</name>
+                            <name lang="de-DE">Tägliche Bestellung unterbrochen, ReviewForest prüft</name>
+                        </option>
+                        <option value="other">
+                            <name>Other reason</name>
+                            <name lang="de-DE">Anderer Grund</name>
+                        </option>
+                    </options>
+                </single-select>
             </fields>
         </custom-field-set>
     </custom-fields>

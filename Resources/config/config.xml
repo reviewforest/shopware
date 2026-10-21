@@ -10,7 +10,7 @@
             <label>ReviewForest API key (read and write)</label>
             <label lang="de-DE">ReviewForest API-Schlüssel (Lesen und Schreiben)</label>
             <helpText>Create the key in ReviewForest under Integrations, API. Needed for review invitations and tree per order; the widgets work without it.</helpText>
-            <helpText lang="de-DE">Den Schlüssel erstellen Sie in ReviewForest unter Integrationen, API. Nötig für Bewertungseinladungen und Baum pro Bestellung; die Widgets funktionieren auch ohne.</helpText>
+            <helpText lang="de-DE">Den Schlüssel erstellst du in ReviewForest unter Integrationen, API. Nötig für Bewertungseinladungen und Baum pro Bestellung; die Widgets funktionieren auch ohne.</helpText>
         </input-field>
         <input-field type="text">
             <name>forestId</name>
@@ -43,7 +43,7 @@
             <label>Floating badge: widget ID</label>
             <label lang="de-DE">Schwebendes Badge: Widget-ID</label>
             <helpText>Shown on every page. Paste the embed code from ReviewForest, or only the ID from it (the part after reviewforest-app-).</helpText>
-            <helpText lang="de-DE">Erscheint auf jeder Seite. Fügen Sie den Einbaucode aus ReviewForest ein oder nur die ID daraus (der Teil nach reviewforest-app-).</helpText>
+            <helpText lang="de-DE">Erscheint auf jeder Seite. Füge den Einbaucode aus ReviewForest ein oder nur die ID daraus (der Teil nach reviewforest-app-).</helpText>
         </input-field>
         <input-field type="text">
             <name>footerWidgetId</name>
@@ -78,7 +78,7 @@
             <label lang="de-DE">Wartezeit beginnt, wenn</label>
             <defaultValue>shipped</defaultValue>
             <helpText>With "one of my flows schedules it" nothing happens automatically: only your Flow Builder flows with the action "Schedule review invitation" invite, with the delay set in the action.</helpText>
-            <helpText lang="de-DE">Mit "ein eigener Flow sie einplant" passiert nichts automatisch: Nur Ihre Flows im Flow Builder mit der Aktion "Bewertungseinladung einplanen" laden ein, mit der Wartezeit aus der Aktion.</helpText>
+            <helpText lang="de-DE">Mit "ein eigener Flow sie einplant" passiert nichts automatisch: Nur deine Flows im Flow Builder mit der Aktion "Bewertungseinladung einplanen" laden ein, mit der Wartezeit aus der Aktion.</helpText>
             <options>
                 <option>
                     <id>shipped</id>
@@ -150,17 +150,19 @@
         </input-field>
         <input-field type="textarea">
             <name>consentTextDe</name>
+            <placeholder>Ja, ich möchte einige Tage nach dem Versand einmalig eine E-Mail von {shop} mit der Bitte um eine Bewertung erhalten. Den Versand übernimmt ReviewForest im Auftrag von {shop}. Für jede Bewertung wird ein Baum gepflanzt, unabhängig davon, wie Sie bewerten. Ich kann diese Einwilligung jederzeit widerrufen, zum Beispiel über den Link in der E-Mail.</placeholder>
             <label>Own consent text, German (optional)</label>
             <label lang="de-DE">Eigener Einwilligungstext, Deutsch (optional)</label>
-            <helpText>Leave empty to use the text provided by ReviewForest. {shop} is replaced by your shop name.</helpText>
-            <helpText lang="de-DE">Leer lassen, um den Text von ReviewForest zu verwenden. {shop} wird durch Ihren Shopnamen ersetzt.</helpText>
+            <helpText>Leave empty to use the text provided by ReviewForest (shown as an example in the field). {shop} is replaced by your shop name.</helpText>
+            <helpText lang="de-DE">Leer lassen, um den Text von ReviewForest zu verwenden (siehe Beispiel im Feld). {shop} wird durch deinen Shopnamen ersetzt.</helpText>
         </input-field>
         <input-field type="textarea">
             <name>consentTextEn</name>
+            <placeholder>Yes, I would like to receive one email from {shop} a few days after shipping, asking me for a review. ReviewForest sends it on behalf of {shop}. A tree is planted for every review, no matter how you rate. I can withdraw this consent at any time, for example via the link in the email.</placeholder>
             <label>Own consent text, English and other languages (optional)</label>
             <label lang="de-DE">Eigener Einwilligungstext, Englisch und weitere Sprachen (optional)</label>
-            <helpText>Leave empty to use the text provided by ReviewForest. {shop} is replaced by your shop name.</helpText>
-            <helpText lang="de-DE">Leer lassen, um den Text von ReviewForest zu verwenden. {shop} wird durch Ihren Shopnamen ersetzt.</helpText>
+            <helpText>Leave empty to use the text provided by ReviewForest (shown as an example in the field). {shop} is replaced by your shop name.</helpText>
+            <helpText lang="de-DE">Leer lassen, um den Text von ReviewForest zu verwenden (siehe Beispiel im Feld). {shop} wird durch deinen Shopnamen ersetzt.</helpText>
         </input-field>
         <component name="sw-entity-multi-id-select">
             <name>excludedCustomerGroups</name>
@@ -180,8 +182,8 @@
             <label>Plant a tree for every order</label>
             <label lang="de-DE">Für jede Bestellung einen Baum pflanzen</label>
             <defaultValue>false</defaultValue>
-            <helpText>The trees of a day are ordered together once a day as additional trees in your ReviewForest forest, at your price for additional trees. That is usually one invoice a day. Cancelled, returned or refunded orders get no tree. Uses the API key and forest from "Connection".</helpText>
-            <helpText lang="de-DE">Die Bäume eines Tages werden einmal täglich gesammelt als zusätzliche Bäume in Ihrem Bewertungswald bestellt, zu Ihrem Preis für zusätzliche Bäume. Das ist in der Regel eine Rechnung pro Tag. Stornierte, retournierte oder erstattete Bestellungen bekommen keinen Baum. Nutzt den API-Schlüssel und den Bewertungswald aus "Verbindung".</helpText>
+            <helpText>Costs money: every tree is an additional tree in your Bewertungswald, at your price for additional trees (ReviewForest shows the price per tree when you plant additional trees there). The trees of a day are ordered together once a day, usually one invoice per day with orders. Example: 15 orders a day are about 450 trees a month. Cancelled, returned or refunded orders get no tree. Uses the API key and forest from "Connection".</helpText>
+            <helpText lang="de-DE">Kostet Geld: Jeder Baum ist ein zusätzlicher Baum in deinem Bewertungswald, zu deinem Preis für zusätzliche Bäume (den Preis pro Baum zeigt dir ReviewForest, wenn du dort zusätzliche Bäume pflanzt). Die Bäume eines Tages bestellen wir einmal täglich gesammelt, in der Regel eine Rechnung pro Tag mit Bestellungen. Beispiel: 15 Bestellungen am Tag sind etwa 450 Bäume im Monat. Stornierte, retournierte oder erstattete Bestellungen bekommen keinen Baum. Nutzt den API-Schlüssel und den Bewertungswald aus "Verbindung".</helpText>
         </input-field>
         <input-field type="single-select">
             <name>treeTrigger</name>

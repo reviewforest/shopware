@@ -8,7 +8,7 @@
     dedication comes from the buyer; it is cut to one line of at most 40 characters here, and the ReviewForest
     API cleans it again before it orders the tree.
 
-    The choice can change until the daily run has ordered the tree (status "planted ...").
+    The choice can change until the daily run has ordered the tree (status "planted").
 #}
 {% set rfOrderId = hook.request.orderId|default('') %}
 {% set rfDeepLinkCode = hook.request.deepLinkCode|default('') %}
@@ -48,7 +48,7 @@
 {% endif %}
 
 {% set rfStatus = (rfOrder.customFields ?? {})['reviewforest_tree_status'] ?? '' %}
-{% if rfStatus starts with 'planted' or rfStatus starts with 'not planted' %}
+{% if rfStatus in ['planted', 'not_planted'] %}
     {% do hook.setResponse(services.response.json({ 'success': false, 'error': 'tree_final' }, 409)) %}
     {% return %}
 {% endif %}

@@ -4,6 +4,12 @@
 
 - Tree per order: every order that reaches the chosen state (shipped, paid or completed) gets a tree in your Bewertungswald. The trees of a day are ordered together once a day as additional trees, usually one invoice a day. Cancelled, returned or refunded orders get no tree.
 - On the order confirmation page buyers choose how their tree appears: with their name, initials only, a dedication or without a name. The choice and the tree status are stored on the order.
+- The ReviewForest fields on the order show translated labels: status, reason and date of the invitation and of the tree, the buyer's answer and where it was given. Dates are shown in the merchant's time zone.
+- Invitation emails carry a subject with the shop name ("Ihre Bewertung für <Shop> pflanzt einen Baum").
+- New setting "one of my flows schedules it": no automatic invitations, only Flow Builder flows invite. The Flow Builder action can be added to flows again (its settings did not open).
+- Buyers in excluded customer groups are no longer asked for consent; their orders show why they are not invited.
+- The widget fields accept the whole embed code.
+- Settings texts address the merchant with "du", like the Shopware admin; the default consent texts are shown in the empty fields.
 
 ## 0.1.0 (unreleased)
 
