@@ -212,8 +212,11 @@ def main():
     payload = json.loads(mongo(f"JSON.stringify(db.invitationJobs.findOne({{externalRef: /{order_id}/}}).payload)") or '{}')
     check('the invitation comes from the shop über/via ReviewForest',
           str(payload.get('senderName', '')).endswith((' über ReviewForest', ' via ReviewForest')), str(payload.get('senderName')))
+    # Like the API: the value set for the order's sales channel wins over the global one.
     basic = admin.request('GET', '/api/_action/system-config?domain=core.basicInformation')
-    shop_email = str(basic.get('core.basicInformation.email') or '').strip()
+    channel_basic = admin.request('GET', f"/api/_action/system-config?domain=core.basicInformation&salesChannelId={order['salesChannelId']}")
+    shop_email = next((str(value).strip() for value in (channel_basic.get('core.basicInformation.email'), basic.get('core.basicInformation.email'))
+                       if isinstance(value, str) and value.strip()), '')
     plain_address = re.fullmatch(r'[A-Za-z0-9_%+-]+(\.[A-Za-z0-9_%+-]+)*@([A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+([A-Za-z]{2,63}|xn--[A-Za-z0-9-]{1,59})', shop_email)
     reply_to = (payload.get('replyTo') or {}).get('email')
     check('replies go to the shop address from the basic information (none without a plain address)',
