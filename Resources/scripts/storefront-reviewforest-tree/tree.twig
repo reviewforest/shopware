@@ -22,7 +22,9 @@
     {% do hook.setResponse(services.response.json({ 'success': false, 'error': 'invalid_request' }, 400)) %}
     {% return %}
 {% endif %}
-{% if not services.config.app('treePerOrderEnabled') or services.config.app('treeAskName') is same as(false) %}
+{% set rfTreeSetting = services.config.app('treePerOrderEnabled') %}
+{% set rfAskName = services.config.app('treeAskName') %}
+{% if not (rfTreeSetting is same as(true) or rfTreeSetting is same as('true') or rfTreeSetting is same as('1')) or (rfAskName is same as(false) or rfAskName is same as('false') or rfAskName is same as('0')) %}
     {% do hook.setResponse(services.response.json({ 'success': false, 'error': 'trees_disabled' }, 403)) %}
     {% return %}
 {% endif %}

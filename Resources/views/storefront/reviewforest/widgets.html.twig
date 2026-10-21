@@ -8,8 +8,11 @@
 {# No third-party widget script on checkout and account pages unless the merchant enables it; the cart counts as a shop page. #}
 {% set rfRoute = app.request.attributes.get('_route')|default('') %}
 {% set rfSensitivePage = (rfRoute starts with 'frontend.checkout.' and rfRoute != 'frontend.checkout.cart.page') or rfRoute starts with 'frontend.account.' %}
-{% set rfWidgetPageAllowed = not rfSensitivePage or config('ReviewForest.config.widgetsOnCheckoutAndAccount') %}
-{% if config('ReviewForest.config.widgetsEnabled') is not same as(false) and rfWidgetPageAllowed %}
+{# Switches are compared exactly: a value set as text on the command line ("false") must not count as on. #}
+{% set rfOnSensitive = config('ReviewForest.config.widgetsOnCheckoutAndAccount') %}
+{% set rfWidgetsSetting = config('ReviewForest.config.widgetsEnabled') %}
+{% set rfWidgetPageAllowed = not rfSensitivePage or (rfOnSensitive is same as(true) or rfOnSensitive is same as('true') or rfOnSensitive is same as('1')) %}
+{% if not (rfWidgetsSetting is same as(false) or rfWidgetsSetting is same as('false') or rfWidgetsSetting is same as('0')) and rfWidgetPageAllowed %}
     {% set rfCandidates = [config('ReviewForest.config.floatingWidgetId')|default('')]|merge(config('ReviewForest.config.additionalWidgetIds')|default('')|split(',')) %}
     {% for rfCandidate in rfCandidates %}
         {% set rfId = rfCandidate|trim|split('reviewforest-app-')|last|split('"')|first|split("'")|first|split('>')|first|trim|split(' ')|first %}

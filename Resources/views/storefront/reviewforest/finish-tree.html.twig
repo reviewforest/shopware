@@ -10,9 +10,11 @@
 {% set rfTreeStatus = (rfOrder.customFields ?? {})['reviewforest_tree_status'] ?? '' %}
 {# A cancelled order gets no tree, so the buyer is not asked (and a reload after the cancellation shows nothing). #}
 {% set rfOrderCancelled = (rfOrder.stateMachineState.technicalName ?? '') == 'cancelled' %}
+{% set rfTreeSetting = config('ReviewForest.config.treePerOrderEnabled') %}
+{% set rfAskName = config('ReviewForest.config.treeAskName') %}
 {% if rfOrder
-    and config('ReviewForest.config.treePerOrderEnabled')
-    and config('ReviewForest.config.treeAskName') is not same as(false)
+    and (rfTreeSetting is same as(true) or rfTreeSetting is same as('true') or rfTreeSetting is same as('1'))
+    and not (rfAskName is same as(false) or rfAskName is same as('false') or rfAskName is same as('0'))
     and not rfOrderCancelled
     and rfTreeStatus != 'not_planted' %}
     {% if context.languageInfo is defined and context.languageInfo %}

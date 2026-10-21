@@ -9,7 +9,8 @@
 #}
 {% set rfOrder = page.order %}
 {% set rfGroupExcluded = context.currentCustomerGroup.id in (config('ReviewForest.config.excludedCustomerGroups')|default([])) %}
-{% if rfOrder and config('ReviewForest.config.invitationsEnabled') and not rfGroupExcluded %}
+{% set rfInvitations = config('ReviewForest.config.invitationsEnabled') %}
+{% if rfOrder and (rfInvitations is same as(true) or rfInvitations is same as('true') or rfInvitations is same as('1')) and not rfGroupExcluded %}
     {% set rfMode = config('ReviewForest.config.consentMode')|default('finish_dialog') %}
     {% set rfAnswer = (rfOrder.customFields ?? {})['reviewforest_consent'] ?? null %}
     {% if context.languageInfo is defined and context.languageInfo %}

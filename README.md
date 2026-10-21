@@ -43,7 +43,7 @@ dev/sync-app.sh sw67                                                         # c
 python3 dev/e2e.py --port 8067                                               # end-to-end checks
 ```
 
-Configure the app in the shop admin (or with `bin/console system:config:set ReviewForest.config.<key> <value>`) with the API key and forest ID printed by the seed script. Admin login of the dockware images: admin / shopware.
+Configure the app in the shop admin (or with `bin/console system:config:set ReviewForest.config.<key> <value>`, with `--json` for switches such as `true`) with the API key and forest ID printed by the seed script. Admin login of the dockware images: admin / shopware.
 
 Notes from the first run (October 2026):
 - MongoDB 8 refuses to start on Docker Desktop's Linux kernel 7.0.12 (SERVER-121912), so the dev setup uses MongoDB 7.

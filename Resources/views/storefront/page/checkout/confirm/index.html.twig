@@ -8,7 +8,8 @@
 {% block page_checkout_confirm_tos %}
     {{ parent() }}
     {% set rfGroupExcluded = context.currentCustomerGroup.id in (config('ReviewForest.config.excludedCustomerGroups')|default([])) %}
-    {% if config('ReviewForest.config.invitationsEnabled') and config('ReviewForest.config.consentMode') == 'checkout_checkbox' and not rfGroupExcluded %}
+    {% set rfInvitations = config('ReviewForest.config.invitationsEnabled') %}
+    {% if (rfInvitations is same as(true) or rfInvitations is same as('true') or rfInvitations is same as('1')) and config('ReviewForest.config.consentMode') == 'checkout_checkbox' and not rfGroupExcluded %}
         <div class="reviewforest-consent-checkbox form-check mb-4" data-reviewforest-checkbox data-cart-total="{{ page.cart.price.totalPrice }}">
             <input type="checkbox" class="form-check-input" id="reviewforestConsentCheckbox" data-reviewforest-checkbox-input>
             <label class="form-check-label" for="reviewforestConsentCheckbox">
