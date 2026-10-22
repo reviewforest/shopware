@@ -318,8 +318,9 @@
                     <position>11</position>
                     <options>
                         <option value="pending">
-                            <name>Planted with the next daily order of trees</name>
-                            <name lang="de-DE">Wird mit der nächsten täglichen Baumbestellung gepflanzt</name>
+                            <!-- RF-12250: true for daily and monthly billing (no "daily"). -->
+                            <name>Planted with the next order of trees</name>
+                            <name lang="de-DE">Wird mit der nächsten Baumbestellung gepflanzt</name>
                         </option>
                         <option value="planted">
                             <name>Planted</name>
@@ -452,9 +453,16 @@
                             <name lang="de-DE">Abrechnung unklar, ReviewForest prüft</name>
                         </option>
                         <option value="interrupted">
-                            <name>Daily order interrupted, ReviewForest checks</name>
-                            <name lang="de-DE">Tägliche Bestellung unterbrochen, ReviewForest prüft</name>
+                            <!-- RF-12250: true for daily and monthly billing (no "daily"). -->
+                            <name>Order of the trees interrupted, ReviewForest checks</name>
+                            <name lang="de-DE">Baumbestellung unterbrochen, ReviewForest prüft</name>
                         </option>
+                        <!-- RF-12250 tree billing: monthly limit (treeMonthlyLimit in config.xml). -->
+                        <option value="monthly_limit_reached">
+                            <name>Monthly limit reached</name>
+                            <name lang="de-DE">Monatsgrenze erreicht</name>
+                        </option>
+                        <!-- /RF-12250 tree billing -->
                         <option value="other">
                             <name>Other reason</name>
                             <name lang="de-DE">Anderer Grund</name>
