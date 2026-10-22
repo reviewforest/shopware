@@ -21,6 +21,8 @@ What it checks, as a buyer and as the merchant would do it:
   7. tree per order: the buyer names the tree on the finish page, shipped adds it, a cancelled order cancels
      it, and the daily run checks the order against the shop and reports back. Locally the run stops in the
      billing code (no Stripe products in the dev database), so it ends "failed: order_rejected".
+     The tree card links to the Bewertungswald (the API redirects the forest ID to the forest page), and a
+     planted order links to its tree.
   8. test mode: the buyer still sees consent question and tree choice, shipping schedules no invitation and
      adds no tree (the order says why); switched on later, it drops a waiting invitation at due time and the
      daily run cancels a waiting tree. Test mode is switched off again at the end, also after an error.
@@ -40,6 +42,8 @@ import uuid
 
 MONGO = 'mongodb://localhost:27019/rf_shopware_dev?replicaSet=rs0&directConnection=true'
 CONTAINER = {8067: 'reviewforest-shopware-dev-sw67-1', 8066: 'reviewforest-shopware-dev-sw66-1'}
+# The shops reach the local API as host.docker.internal:3000; this script runs on the host.
+API = 'http://localhost:3000'
 results = []
 
 
@@ -101,6 +105,20 @@ class Admin:
 def mongo(js):
     out = subprocess.run(['mongosh', '--quiet', MONGO, '--eval', js], capture_output=True, text=True, check=True)
     return out.stdout.strip()
+
+
+class NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, *args, **kwargs):
+        return None
+
+
+def api_get(path):
+    """GET on the local API without following redirects: (status, Location header)."""
+    try:
+        with urllib.request.build_opener(NoRedirect).open(API + path) as response:
+            return response.status, response.headers.get('Location')
+    except urllib.error.HTTPError as error:
+        return error.code, error.headers.get('Location')
 
 
 def consume_queue(port):
@@ -341,6 +359,24 @@ def main():
     admin.request('POST', '/api/_action/system-config', {'ReviewForest.config.treePerOrderEnabled': True})
     order_id, finish_html = place_guest_order(shop, product['id'], f'e2e-tree-{run}@example.com')
     check('tree name question shown on the order confirmation page', 'data-reviewforest-tree-form' in finish_html)
+    # RF-12251: the tree card links to the shop's Bewertungswald through the API, which redirects by forest ID.
+    link = re.search(r'<p class="reviewforest-tree-link[^"]*">\s*<a href="([^"]+)" target="_blank" rel="noopener">', finish_html)
+    href = urllib.parse.urlsplit(link.group(1).replace('&amp;', '&')) if link else None
+    path = re.fullmatch(r'/integrations/shopware/forest-page/([0-9a-fA-F]{24})', href.path) if href else None
+    forest_id = path.group(1) if path else ''
+    # The forest ID of the order's sales channel, else the global one (an empty channel value inherits, as in the API).
+    channel_id = admin.search('order', {'ids': [order_id]})[0]['salesChannelId']
+    channel = admin.request('GET', f'/api/_action/system-config?domain=ReviewForest.config&salesChannelId={channel_id}')
+    configured = str(channel.get('ReviewForest.config.forestId') or config.get('ReviewForest.config.forestId') or '').strip()
+    check('the tree card links to the Bewertungswald', bool(forest_id) and forest_id.lower() == configured.lower(),
+          f"{link.group(1) if link else 'no link'} (configured: {configured})")
+    if forest_id:
+        status, location = api_get(f'{href.path}?{href.query}')
+        slug = mongo(f"db.forests.findOne({{_id: ObjectId('{forest_id}')}})?.slug")
+        target = urllib.parse.urlsplit(location or '')
+        check('the API redirects the forest link to the forest page', status == 302 and target.path == f'/{slug}', f'HTTP {status} {location}')
+    status, location = api_get('/integrations/shopware/forest-page/' + '0' * 24)
+    check('an unknown forest gets no redirect', status == 404 and not location, f'HTTP {status} {location}')
     deep_link = re.search(r'name="deepLinkCode" value="([^"]+)"', finish_html).group(1)
     status, answer = shop.post_json('/storefront/script/reviewforest-tree', {'orderId': order_id, 'deepLinkCode': deep_link, 'treeChoice': 'initials'})
     check('initials are built from the order, not from the request', status == 200 and answer.get('name') == 'E. T.', f"HTTP {status} {answer}")
@@ -388,6 +424,21 @@ def main():
     check('the daily run checks the order and reaches the billing call',
           record.get('status') == 'planted' or (record.get('status') == 'failed' and record.get('statusReason') == 'order_rejected'), json.dumps(record))
     check('the result of the daily run is written to the order', bool(reported), str(tree_status))
+    # RF-12251: a planted tree gets its link on the order. Locally the run stops before billing (see above), so this
+    # only runs with Stripe test data or the usability test's time machine.
+    if record.get('status') == 'planted':
+        unique_id = mongo(f"db.orderTrees.findOne({{externalRef: /{order_id}/}})?.treeUniqueId")
+        tree_url = str((admin.search('order', {'ids': [order_id]})[0].get('customFields') or {}).get('reviewforest_tree_url') or '')
+        check('a planted tree gets its link on the order', bool(unique_id) and tree_url.endswith(f'/?review={unique_id}'), tree_url)
+    else:
+        print('SKIP  a planted tree gets its link on the order (the local run did not plant)')
+    # The confirmation page of a planted order links to the tree. The status is set by hand on a new order (the
+    # finish page only opens for the session's latest guest), which stays open, so it gets no tree.
+    planted_id, _ = place_guest_order(shop, product['id'], f'e2e-tree-link-{run}@example.com')
+    tree_url = f'https://forest.example.test/shopware-dev/?review=e2e-{run}'
+    admin.request('PATCH', f'/api/order/{planted_id}', {'customFields': {'reviewforest_tree_status': 'planted', 'reviewforest_tree_url': tree_url}})
+    _, html = shop.get(f'/checkout/finish?orderId={planted_id}')
+    check('the confirmation page of a planted order links to the tree', f'<a href="{tree_url}" target="_blank" rel="noopener">' in html)
     admin.request('POST', '/api/_action/system-config', {'ReviewForest.config.treePerOrderEnabled': False})
 
     check_test_mode(args.port, shop, admin, product['id'], run)
