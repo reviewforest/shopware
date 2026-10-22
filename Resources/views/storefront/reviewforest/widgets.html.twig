@@ -3,6 +3,11 @@
     the ID: the part after "reviewforest-app-" is taken. Anything that is not a plain ID after that is ignored,
     so a typo in the configuration can never inject markup. The footer widget is rendered by
     layout/footer/footer.html.twig.
+
+    Cookie consent (setting widgetsConsent, RF-12254): by default the page only carries the placeholders and a
+    hidden marker. The app's storefront script (Resources/app/storefront/src/main.js) adds the ReviewForest loader
+    once the visitor allowed "ReviewForest" in Shopware's cookie settings (comfort features). Only the exact value
+    "always" writes the loader script into the page, so an empty or unknown value waits for consent.
 #}
 {% set rfWidgetIds = [] %}
 {# No third-party widget script on checkout and account pages unless the merchant enables it; the cart counts as a shop page. #}
@@ -11,8 +16,10 @@
 {# Switches are compared exactly: a value set as text on the command line ("false") must not count as on. #}
 {% set rfOnSensitive = config('ReviewForest.config.widgetsOnCheckoutAndAccount') %}
 {% set rfWidgetsSetting = config('ReviewForest.config.widgetsEnabled') %}
+{% set rfWidgetsOn = not (rfWidgetsSetting is same as(false) or rfWidgetsSetting is same as('false') or rfWidgetsSetting is same as('0')) %}
+{% set rfLoadAlways = config('ReviewForest.config.widgetsConsent') is same as('always') %}
 {% set rfWidgetPageAllowed = not rfSensitivePage or (rfOnSensitive is same as(true) or rfOnSensitive is same as('true') or rfOnSensitive is same as('1')) %}
-{% if not (rfWidgetsSetting is same as(false) or rfWidgetsSetting is same as('false') or rfWidgetsSetting is same as('0')) and rfWidgetPageAllowed %}
+{% if rfWidgetsOn and rfWidgetPageAllowed %}
     {% set rfCandidates = [config('ReviewForest.config.floatingWidgetId')|default('')]|merge(config('ReviewForest.config.additionalWidgetIds')|default('')|split(',')) %}
     {% for rfCandidate in rfCandidates %}
         {% set rfId = rfCandidate|trim|split('reviewforest-app-')|last|split('"')|first|split("'")|first|split('>')|first|trim|split(' ')|first %}
@@ -22,10 +29,25 @@
     {% endfor %}
     {% set rfFooterWidgetId = config('ReviewForest.config.footerWidgetId')|default('')|trim|split('reviewforest-app-')|last|split('"')|first|split("'")|first|split('>')|first|trim|split(' ')|first %}
     {% set rfHasFooter = rfFooterWidgetId matches '/^[A-Za-z0-9-]{8,64}$/' %}
-    {% if rfWidgetIds is not empty or rfHasFooter %}
-        {% for rfId in rfWidgetIds %}
-            <div class="reviewforest-app-{{ rfId }}"></div>
-        {% endfor %}
-        <script src="https://widgets.reviewforest.org/main.js" defer></script>
+    {% for rfId in rfWidgetIds %}
+        <div class="reviewforest-app-{{ rfId }}"></div>
+    {% endfor %}
+    {% if rfLoadAlways %}
+        {% if rfWidgetIds is not empty or rfHasFooter %}
+            <script src="https://widgets.reviewforest.org/main.js" defer></script>
+        {% endif %}
+    {% else %}
+        {#
+            Also without widget IDs in the app: placeholders from Shopping Experiences (embed code without its script
+            line) are loaded after consent as well. The storefront script loads nothing on a page without placeholders.
+        #}
+        <div hidden data-reviewforest-widgets-consent></div>
     {% endif %}
+{% endif %}
+{% if rfLoadAlways or not rfWidgetsOn %}
+    {#
+        Shopware 6.7.14 and later remove the app's cookie entry with the script in Resources/scripts/cookie-group-collect.
+        Older versions always list it; the storefront script hides it there, because it would change nothing.
+    #}
+    <div hidden data-reviewforest-cookie-entry-unused></div>
 {% endif %}

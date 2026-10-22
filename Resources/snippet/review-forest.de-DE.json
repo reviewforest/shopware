@@ -1,0 +1,8 @@
+{
+    "reviewForestApp": {
+        "cookie": {
+            "widgets": "ReviewForest: Bewertungen und Bewertungswald",
+            "widgetsDescription": "Zeigt unsere Kundenbewertungen und unseren Bewertungswald. Dafür lädt Ihr Browser Inhalte von ReviewForest und weiteren Anbietern, zum Beispiel Profilbilder aus den Bewertungen, und überträgt dabei Ihre IP-Adresse. Mehr dazu in unserer Datenschutzerklärung."
+        }
+    }
+}

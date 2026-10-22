@@ -485,4 +485,25 @@
         <webhook name="orderReturned" url="http://host.docker.internal:3000/integrations/shopware/webhooks" event="state_enter.order_delivery.state.returned"/>
         <webhook name="orderRefunded" url="http://host.docker.internal:3000/integrations/shopware/webhooks" event="state_enter.order_transaction.state.refunded"/>
     </webhooks>
+    <!--
+        Widget consent (RF-12254): "ReviewForest" as an entry of Shopware's comfort features in the cookie settings,
+        next to YouTube and Vimeo. On consent Shopware sets the cookie reviewforest-widgets=1 for 30 days (like its own
+        entries) and the storefront script loads the widgets. Name and description are storefront snippets
+        (Resources/snippet). No snippet-description on the group: Shopware 6.7 would overwrite the description of
+        its own group with it. Resources/scripts/cookie-group-collect removes the entry when it has no effect.
+    -->
+    <cookies>
+        <group>
+            <snippet-name>cookie.groupComfortFeatures</snippet-name>
+            <entries>
+                <cookie>
+                    <cookie>reviewforest-widgets</cookie>
+                    <snippet-name>reviewForestApp.cookie.widgets</snippet-name>
+                    <snippet-description>reviewForestApp.cookie.widgetsDescription</snippet-description>
+                    <value>1</value>
+                    <expiration>30</expiration>
+                </cookie>
+            </entries>
+        </group>
+    </cookies>
 </manifest>

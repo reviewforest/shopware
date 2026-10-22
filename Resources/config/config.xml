@@ -52,6 +52,32 @@
             <helpText>Off by default, so no external script runs while buyers enter their data. The cart always shows widgets.</helpText>
             <helpText lang="de-DE">Standardmäßig aus, damit kein externes Skript läuft, während Käufer ihre Daten eingeben. Im Warenkorb erscheinen Widgets immer.</helpText>
         </input-field>
+        <!--
+            Widget consent (RF-12254). "after_consent": the page carries only the placeholders, the storefront script
+            loads widgets.reviewforest.org/main.js after consent to the cookie entry "reviewforest-widgets"
+            (manifest.xml). "always": the loader script is in the page. Only the exact value "always" skips consent.
+        -->
+        <input-field type="single-select">
+            <name>widgetsConsent</name>
+            <label>When the widgets load</label>
+            <label lang="de-DE">Wann die Widgets laden</label>
+            <defaultValue>after_consent</defaultValue>
+            <helpText>Only after consent (default): the widgets appear only for visitors who allow "ReviewForest: reviews and review forest" under comfort features in the cookie settings. Until then your shop loads nothing from ReviewForest. Switch on the "Accept all cookies" button under Settings, Basic information, otherwise only visitors who open the cookie settings can agree. Always: the widgets load on every page without asking; name them in your privacy policy. What applies to your shop is best clarified with your legal adviser.</helpText>
+            <helpText lang="de-DE">Erst nach Zustimmung (Standard): Die Widgets erscheinen nur bei Besuchern, die in den Cookie-Einstellungen unter Komfortfunktionen "ReviewForest: Bewertungen und Bewertungswald" erlauben. Vorher lädt dein Shop nichts von ReviewForest. Schalte dafür unter Einstellungen, Grundeinstellungen den "Alle Cookies akzeptieren"-Button ein, sonst stimmen nur Besucher zu, die die Cookie-Einstellungen öffnen. Immer: Die Widgets laden auf jeder Seite ohne Nachfrage; nenne sie dann in deiner Datenschutzerklärung. Was für deinen Shop gilt, klärst du am besten mit deiner Rechtsberatung.</helpText>
+            <options>
+                <option>
+                    <id>after_consent</id>
+                    <name>Only after consent in the cookie banner (comfort features)</name>
+                    <name lang="de-DE">Erst nach Zustimmung im Cookie-Banner (Komfortfunktionen)</name>
+                </option>
+                <option>
+                    <id>always</id>
+                    <name>Always, without asking</name>
+                    <name lang="de-DE">Immer, ohne Nachfrage</name>
+                </option>
+            </options>
+        </input-field>
+        <!-- End of widget consent (RF-12254). -->
         <input-field type="text">
             <name>floatingWidgetId</name>
             <label>Floating badge: widget ID</label>

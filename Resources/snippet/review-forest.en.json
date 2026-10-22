@@ -1,0 +1,8 @@
+{
+    "reviewForestApp": {
+        "cookie": {
+            "widgets": "ReviewForest: reviews and review forest",
+            "widgetsDescription": "Shows our customer reviews and our review forest. For this, your browser loads content from ReviewForest and other providers, for example profile pictures from the reviews, and transmits your IP address. More in our privacy policy."
+        }
+    }
+}

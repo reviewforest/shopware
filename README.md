@@ -3,6 +3,7 @@
 Shopware app (app system, no PHP in the shop) for Shopware 6.6 and 6.7, including Shopware SaaS.
 
 - **Widgets without code:** shows your ReviewForest widgets (floating badge, footer widget, more widget IDs) on every shop page, configurable per sales channel. Checkout and customer account pages stay free of the widget script unless you switch that on.
+- **Cookie consent for the widgets:** by default the widget script loads only after the visitor allowed "ReviewForest" under comfort features in Shopware's cookie settings, right away and without a reload. Alternatively the widgets load always.
 - **Review invitations after shipping:** a set number of days after shipping (or payment, or completion) the buyer gets one review invitation, but only if they agreed.
 - **Consent:** either a question with "Yes, please" and "No, thanks" on the order confirmation page, or an unchecked checkbox in the checkout. Answer, time, source and text version are stored on the order.
 - **Sender and replies (0.2.0):** the invitation comes from "<shop name> über ReviewForest" (German orders) or "<shop name> via ReviewForest", sent from noreply-invite@reviewforest.org. Replies go to the shop's email address from Settings > Basic information.
@@ -20,6 +21,7 @@ The server side lives in the ReviewForest API (`/integrations/shopware/*`). This
 | Forest ID | The Bewertungswald that receives this sales channel's invitations. |
 | Test mode: no invitations, no trees | Off by default. For test and staging shops: buyers see the consent question and the tree choice as usual, but no invitation is sent and no tree is ordered, also none already scheduled, and nothing is made up later. Orders show the reason "Test mode: nothing sent" / "Test mode: no tree". |
 | Widget IDs | The part after `reviewforest-app-` in the embed code, or the whole embed code. |
+| When the widgets load | Only after consent in the cookie banner (default) or always. With consent, the app adds the entry "ReviewForest" (cookie `reviewforest-widgets`, 30 days) to the comfort features; Shopware's "Accept all cookies" button should be on. Shop owners with another consent tool call `ReviewForestWidgets.load()` from it. |
 | Send review invitations | Off by default. |
 | Start the delay when / Delay in days | Shipped, paid or completed, or only through your Flow Builder flows; 1 to 60 days (default: shipped, 7). |
 | Style of the email | Formal or friendly. |
@@ -49,6 +51,8 @@ python3 dev/e2e.py --port 8067                                               # e
 ```
 
 Configure the app in the shop admin (or with `bin/console system:config:set ReviewForest.config.<key> <value>`, with `--json` for switches such as `true`) with the API key and forest ID printed by the seed script. Admin login of the dockware images: admin / shopware.
+
+The cookie consent logic of the storefront script has a test page without a shop: open `dev/widget-consent-test.html` in a browser (file:// works; add `?src=1` to test the source instead of the build). It simulates Shopware's `CookieConfiguration_Update` event and sends no requests.
 
 Notes from the first run (October 2026):
 - MongoDB 8 refuses to start on Docker Desktop's Linux kernel 7.0.12 (SERVER-121912), so the dev setup uses MongoDB 7.

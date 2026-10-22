@@ -1,0 +1,17 @@
+{#
+    Hook cookie-group-collect (Shopware 6.7.14 and later; older versions ignore it and always list the entry).
+    The cookie entry "reviewforest-widgets" (manifest.xml, comfort features) is only offered when it decides
+    something: the widgets are switched on and wait for consent (setting widgetsConsent, RF-12254). Removing it
+    otherwise also keeps it out of Shopware's cookie hash, so shops that load the widgets always do not ask their
+    visitors for consent again after an app update.
+    Only the exact value "always" counts as "no consent needed", like in storefront/reviewforest/widgets.html.twig.
+#}
+{% set rfLoadAlways = services.config.app('widgetsConsent') is same as('always') %}
+{% set rfWidgetsSetting = services.config.app('widgetsEnabled') %}
+{% set rfWidgetsOff = rfWidgetsSetting is same as(false) or rfWidgetsSetting is same as('false') or rfWidgetsSetting is same as('0') %}
+{% if rfLoadAlways or rfWidgetsOff %}
+    {% set rfGroup = hook.cookieGroups.get('cookie.groupComfortFeatures') %}
+    {% if rfGroup is not null and rfGroup.entries is not null %}
+        {% do rfGroup.entries.remove('reviewforest-widgets') %}
+    {% endif %}
+{% endif %}

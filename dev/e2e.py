@@ -10,7 +10,10 @@ sales channel (API key and forest from dev/seed-api.js, invitations on, trigger 
 with apps/api/.env from dev/api.env.example, mongosh on the PATH.
 
 What it checks, as a buyer and as the merchant would do it:
-  1. widget placeholders and the loader on home, category, product and cart; none on account pages
+  1. widget placeholders and the loader on home, category, product and cart; none on account pages. By default
+     the loader waits for cookie consent: the page carries a marker instead of the script, and the cookie settings
+     offer "ReviewForest" under comfort features; with "always" the script is in the page and the entry is dropped
+     (Shopware 6.7.14+) or hidden by the storefront script (older versions)
   2. guest order, consent "yes" through the app's storefront script, stored on the order
   3. delivery shipped -> invitation scheduled with the configured delay, status written to the order
   4. order cancelled -> invitation cancelled
@@ -225,6 +228,46 @@ def check_test_mode(port, shop, admin, product_id, run):
         admin.request('POST', '/api/_action/system-config', {'ReviewForest.config.testMode': False, 'ReviewForest.config.treePerOrderEnabled': False})
 
 
+# Widget consent (RF-12254) --------------------------------------------------------------------------------------
+def version_tuple(version):
+    return tuple(int(part) for part in re.findall(r'\d+', version)[:4])
+
+
+def check_widget_consent(shop, admin, consent_mode):
+    """The cookie settings offer "ReviewForest" (comfort features) only while the widgets wait for consent.
+
+    Switches the setting to the other value for a moment and back. With "always", Shopware 6.7.14 and later drop
+    the entry (app script cookie-group-collect); older versions keep it in the HTML and the storefront script
+    hides it, which only a browser shows. Loading after consent itself needs a browser too (see the README).
+    """
+    version = admin.request('GET', '/api/_info/version').get('version', '0')
+    has_hook = version_tuple(version) >= (6, 7, 14, 0)
+    previous = admin.request('GET', '/api/_action/system-config?domain=ReviewForest.config').get('ReviewForest.config.widgetsConsent')
+    try:
+        for mode in (['after_consent', 'always'] if consent_mode else ['always', 'after_consent']):
+            admin.request('POST', '/api/_action/system-config', {'ReviewForest.config.widgetsConsent': mode})
+            _, page = shop.get('/')
+            _, settings = shop.get('/cookie/offcanvas')
+            entry = 'data-cookie="reviewforest-widgets"' in settings
+            untranslated = 'reviewForestApp.cookie' in settings
+            if mode == 'after_consent':
+                check('consent mode: placeholders and consent marker, no loader script in the page',
+                      'data-reviewforest-widgets-consent' in page and 'widgets.reviewforest.org/main.js' not in page)
+                check('consent mode: cookie settings offer ReviewForest, translated', entry and not untranslated,
+                      'snippet key shown untranslated' if untranslated else '')
+            else:
+                check('load always: loader script in the page, marker that hides the unused cookie entry',
+                      'widgets.reviewforest.org/main.js' in page and 'data-reviewforest-cookie-entry-unused' in page
+                      and 'data-reviewforest-widgets-consent' not in page)
+                if has_hook:
+                    check(f'load always: Shopware {version} drops the cookie entry', not entry)
+                else:
+                    check(f'load always: Shopware {version} keeps the entry in the HTML (hidden by the storefront script)', entry)
+    finally:
+        admin.request('POST', '/api/_action/system-config', {'ReviewForest.config.widgetsConsent': previous})
+# End of widget consent (RF-12254) -------------------------------------------------------------------------------
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--port', type=int, default=8067)
@@ -237,12 +280,20 @@ def main():
     product = admin.search('product', {'filter': [{'type': 'equals', 'field': 'parentId', 'value': None}], 'limit': 1})[0]
     category = admin.search('category', {'filter': [{'type': 'equals', 'field': 'level', 'value': 2}], 'limit': 1})[0]
 
-    # 1. widgets
+    # 1. widgets; by default the loader waits for cookie consent (RF-12254), only "always" puts it into the page
+    consent_mode = config.get('ReviewForest.config.widgetsConsent') != 'always'
     for label, page in [('home', '/'), ('category', f"/navigation/{category['id']}"), ('product', f"/detail/{product['id']}"), ('cart', '/checkout/cart')]:
         _, html = shop.get(page)
-        check(f'widgets on {label}', widget_count(html) >= 1 and 'widgets.reviewforest.org/main.js' in html, f'{widget_count(html)} placeholders')
+        if consent_mode:
+            loader_ok = 'data-reviewforest-widgets-consent' in html and 'widgets.reviewforest.org/main.js' not in html
+        else:
+            loader_ok = 'widgets.reviewforest.org/main.js' in html
+        check(f'widgets on {label}', widget_count(html) >= 1 and loader_ok,
+              f"{widget_count(html)} placeholders, loader {'after consent' if consent_mode else 'in the page'}")
     _, html = shop.get('/account/login')
-    check('no widget script on account pages', widget_count(html) == 0 and 'widgets.reviewforest.org' not in html)
+    check('no widget script on account pages', widget_count(html) == 0 and 'widgets.reviewforest.org' not in html
+          and 'data-reviewforest-widgets-consent' not in html)
+    check_widget_consent(shop, admin, consent_mode)
 
     # 2. order with consent yes
     run = uuid.uuid4().hex[:8]

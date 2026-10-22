@@ -15,6 +15,7 @@
 - Test mode for test and staging shops ("Test mode: no invitations, no trees", per sales channel): buyers see the consent question and the tree choice as usual and the orders get their status, but no invitation is sent and no tree is ordered or billed, also none that was already waiting. The orders show "Test mode: nothing sent" and "Test mode: no tree".
 - Buyers in excluded customer groups are no longer asked for consent; their orders show why they are not invited.
 - The widget fields accept the whole embed code.
+- Cookie consent for the widgets (new setting "When the widgets load"): by default the widget script loads only after the visitor allowed "ReviewForest" under comfort features in the cookie settings, right after saving and without a reload; withdrawing consent hides the widgets on the page. With "Always" the widgets load as before and the entry is not offered. Adding the entry changes Shopware's cookie configuration, so Shopware 6.7.3 and later ask visitors for consent once more after the update (from 6.7.14 not in shops that load the widgets always).
 - Settings texts address the merchant with "du", like the Shopware admin; the default consent texts are shown in the empty fields.
 
 ## 0.1.0 (unreleased)
