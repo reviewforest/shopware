@@ -9,6 +9,7 @@
 - New setting "one of my flows schedules it": no automatic invitations, only Flow Builder flows invite. The Flow Builder action can be added to flows again (its settings did not open).
 - Buyers in excluded customer groups are no longer asked for consent; their orders show why they are not invited.
 - The widget fields accept the whole embed code.
+- Cookie consent for the widgets (new setting "When the widgets load"): by default the widget script loads only after the visitor allowed "ReviewForest" under comfort features in the cookie settings, right after saving and without a reload; withdrawing consent removes the widgets from the page. With "Always" the widgets load as before and the entry is not offered. Adding the entry changes Shopware's cookie configuration, so Shopware 6.7.3 and later ask visitors for consent once more after the update (from 6.7.14 not in shops that load the widgets always).
 - Settings texts address the merchant with "du", like the Shopware admin; the default consent texts are shown in the empty fields.
 
 ## 0.1.0 (unreleased)

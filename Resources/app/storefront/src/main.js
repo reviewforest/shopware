@@ -1,10 +1,12 @@
 /*
- * ReviewForest app for Shopware: consent and tree name handling in the storefront.
+ * ReviewForest app for Shopware: consent and tree name handling in the storefront, and the widget loader after
+ * cookie consent.
  *
  * Plain JavaScript without build step or dependencies. Everything works without it too:
  * - Finish page question: the form posts normally and the script endpoint redirects back.
  * - Checkout checkbox: without JavaScript no answer is stored, so no invitation is sent (fail-safe).
  * - Tree name (tree per order): the form posts normally and the script endpoint redirects back.
+ * - Widgets that wait for cookie consent: without JavaScript they do not load at all (fail-safe).
  */
 (function () {
     'use strict';
@@ -251,7 +253,136 @@
         });
     }
 
+    /*
+     * Widgets and cookie consent (setting "When the widgets load", RF-12254).
+     * By default the page only carries the widget placeholders and a hidden marker. The ReviewForest loader is added
+     * once the visitor allowed "ReviewForest" in Shopware's cookie settings (comfort features): on page load when
+     * the consent cookie is set, and right after the visitor saves the cookie settings, without a reload. Shopware
+     * dispatches "CookieConfiguration_Update" on the document with the changed cookies ({ name: true|false }).
+     */
+    var WIDGET_LOADER_URL = 'https://widgets.reviewforest.org/main.js';
+    var WIDGET_CONSENT_COOKIE = 'reviewforest-widgets'; // the cookie entry in manifest.xml, set by Shopware on consent
+    var COOKIE_CONFIGURATION_UPDATE = 'CookieConfiguration_Update';
+    var WIDGET_PLACEHOLDER_SELECTOR = '[class*="reviewforest-app-"]'; // the same selector the loader uses
+    var widgetLoaderAdded = false;
+
+    function hasCookie(name) {
+        var cookies = document.cookie ? document.cookie.split(';') : [];
+        for (var i = 0; i < cookies.length; i++) {
+            var cookie = cookies[i].trim();
+            if (cookie.indexOf(name + '=') === 0 && cookie.length > name.length + 1) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    function loaderPresent() {
+        if (widgetLoaderAdded || window.rfapps) {
+            return true;
+        }
+        // An embed code of the merchant (for example in a Shopping Experience) may bring its own loader.
+        var scripts = document.getElementsByTagName('script');
+        for (var i = 0; i < scripts.length; i++) {
+            if (scripts[i].src && scripts[i].src.indexOf(WIDGET_LOADER_URL) === 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    function loadWidgets() {
+        if (loaderPresent() || !document.querySelector(WIDGET_PLACEHOLDER_SELECTOR)) {
+            return; // already loaded, or no widget on this page
+        }
+        widgetLoaderAdded = true;
+        // The loader reads the placeholders when it runs, so it also works after the page has loaded.
+        var script = document.createElement('script');
+        script.src = WIDGET_LOADER_URL;
+        script.async = true;
+        document.head.appendChild(script);
+    }
+
+    function removeWidgets() {
+        // Consent withdrawn: the widgets disappear from this page, and the next page does not load the loader.
+        var placeholders = document.querySelectorAll(WIDGET_PLACEHOLDER_SELECTOR);
+        for (var i = 0; i < placeholders.length; i++) {
+            if (placeholders[i].parentNode) {
+                placeholders[i].parentNode.removeChild(placeholders[i]);
+            }
+        }
+    }
+
+    function initWidgetConsent() {
+        document.addEventListener(COOKIE_CONFIGURATION_UPDATE, function (event) {
+            var updated = event && event.detail;
+            if (!updated || typeof updated[WIDGET_CONSENT_COOKIE] !== 'boolean') {
+                return; // other cookies changed
+            }
+            if (updated[WIDGET_CONSENT_COOKIE]) {
+                loadWidgets();
+            } else if (loaderPresent()) {
+                // Only after the widgets were loaded. Shopware also reports "false" for entries that were never
+                // allowed (button "Only technically required", or a new consent round after a change of the cookie
+                // configuration); the placeholders stay, so consent given later on the same page still works.
+                removeWidgets();
+            }
+        });
+        // For consent tools that replace Shopware's cookie banner: call ReviewForestWidgets.load() after consent.
+        window.ReviewForestWidgets = { load: loadWidgets };
+        if (hasCookie(WIDGET_CONSENT_COOKIE)) {
+            loadWidgets();
+        } else if (window.useDefaultCookieConsent !== true && window.console) {
+            window.console.warn(
+                'ReviewForest: the widgets wait for cookie consent, but the Shopware cookie banner is switched off. ' +
+                    'Let your consent tool call ReviewForestWidgets.load(), or set the widgets to load always.'
+            );
+        }
+    }
+
+    /*
+     * The cookie entry comes from manifest.xml and is listed in every shop. Shopware 6.7.14 and later drop it when it
+     * has no effect (Resources/scripts/cookie-group-collect); on older versions it is hidden here, so visitors are
+     * never offered a choice that changes nothing.
+     */
+    function hideUnusedCookieEntry() {
+        var selector = 'input[data-cookie="' + WIDGET_CONSENT_COOKIE + '"]';
+        function hideIn(root) {
+            var inputs = Array.prototype.slice.call(root.querySelectorAll(selector));
+            if (root.matches && root.matches(selector)) {
+                inputs.push(root);
+            }
+            for (var i = 0; i < inputs.length; i++) {
+                var entry = inputs[i].closest('.offcanvas-cookie-entry') || inputs[i].parentElement;
+                if (entry) {
+                    entry.style.display = 'none';
+                }
+            }
+        }
+        hideIn(document);
+        if (!window.MutationObserver || !document.body) {
+            return;
+        }
+        // The cookie settings are loaded into an off-canvas panel when the visitor opens them.
+        new window.MutationObserver(function (mutations) {
+            for (var i = 0; i < mutations.length; i++) {
+                var added = mutations[i].addedNodes;
+                for (var j = 0; j < added.length; j++) {
+                    if (added[j].nodeType === 1) {
+                        hideIn(added[j]);
+                    }
+                }
+            }
+        }).observe(document.body, { childList: true, subtree: true });
+    }
+
     function init() {
+        if (document.querySelector('[data-reviewforest-widgets-consent]')) {
+            initWidgetConsent();
+        }
+        if (document.querySelector('[data-reviewforest-cookie-entry-unused]')) {
+            hideUnusedCookieEntry();
+        }
         var forms = document.querySelectorAll('[data-reviewforest-consent-form]');
         for (var i = 0; i < forms.length; i++) {
             initFinishDialog(forms[i]);

@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Widget consent test</title>
+    <style>
+        body { font: 15px/1.5 system-ui, sans-serif; margin: 2rem; max-width: 60rem; }
+        .pass { color: #176b2c; }
+        .fail { color: #b00020; font-weight: 600; }
+        iframe { display: none; }
+    </style>
+</head>
+<body>
+<h1>Widget consent: storefront script test</h1>
+<p>
+    Checks the cookie consent logic of the app's storefront script (RF-12254) without a shop. Open this file in a
+    browser; file:// works. Every scenario runs the built script
+    (<code>Resources/app/storefront/dist/storefront/js/review-forest/review-forest.js</code>, or the source with
+    <code>?src=1</code>) in its own frame. Nothing leaves the browser: the cookie is simulated and the loader script
+    element is recorded instead of inserted. Shopware's cookie settings are simulated by the event they dispatch,
+    <code>CookieConfiguration_Update</code> on the document. A real shop test is still needed.
+</p>
+<p id="summary">Running...</p>
+<ol id="results"></ol>
+<script>
+(function () {
+    'use strict';
+    var LOADER = 'https://widgets.reviewforest.org/main.js';
+    var params = new URLSearchParams(window.location.search);
+    var scriptPath = params.get('src') === '1'
+        ? '../Resources/app/storefront/src/main.js'
+        : '../Resources/app/storefront/dist/storefront/js/review-forest/review-forest.js';
+    var scriptUrl = new URL(scriptPath, window.location.href).href;
+
+    var PLACEHOLDER = '<div class="reviewforest-app-11111111-2222-4333-8444-555555555555"></div>';
+    var CONSENT_MARKER = '<div hidden data-reviewforest-widgets-consent></div>';
+    var UNUSED_MARKER = '<div hidden data-reviewforest-cookie-entry-unused></div>';
+    var COOKIE_SETTINGS = '<div class="offcanvas"><div class="offcanvas-cookie-entry form-check" id="rf-entry">' +
+        '<input type="checkbox" data-cookie="reviewforest-widgets" data-cookie-value="1"></div>' +
+        '<div class="offcanvas-cookie-entry form-check" id="yt-entry"><input type="checkbox" data-cookie="youtube-video"></div></div>';
+
+    /*
+     * Each scenario: the page body, the simulated cookie string, whether Shopware's banner is on, and a test
+     * function that runs in the frame after the storefront script initialised. t has: added() (loader script
+     * elements the storefront script tried to insert), update(changes) (dispatches CookieConfiguration_Update),
+     * warnings, settle() (a promise that lets MutationObservers run), and check(name, ok).
+     */
+    var scenarios = [
+        {
+            name: 'Consent mode without consent cookie: no loader; accepting later adds it once, without a reload',
+            body: PLACEHOLDER + CONSENT_MARKER,
+            test: function (t, w) {
+                t.check('no loader before consent', t.added().length === 0);
+                t.check('no warning while Shopware\'s banner is on', t.warnings.length === 0);
+                t.update({ 'reviewforest-widgets': true });
+                t.check('loader added after consent', t.added().length === 1 && t.added()[0].src === LOADER);
+                t.check('loader is async', t.added().length === 1 && t.added()[0].async === true);
+                t.update({ 'reviewforest-widgets': true });
+                w.ReviewForestWidgets.load();
+                t.check('never added twice', t.added().length === 1);
+            }
+        },
+        {
+            name: 'Consent mode with consent cookie: loader added on page load',
+            body: PLACEHOLDER + CONSENT_MARKER,
+            cookie: 'session-=abc; reviewforest-widgets=1; cookie-preference=1',
+            test: function (t) {
+                t.check('loader added on load', t.added().length === 1 && t.added()[0].src === LOADER);
+            }
+        },
+        {
+            name: 'Consent mode: a cookie with an empty value or a similar name does not count',
+            body: PLACEHOLDER + CONSENT_MARKER,
+            cookie: 'reviewforest-widgets=; reviewforest-widgets-old=1; xreviewforest-widgets=1',
+            test: function (t) {
+                t.check('no loader', t.added().length === 0);
+            }
+        },
+        {
+            name: 'Consent mode: changes of other cookies are ignored',
+            body: PLACEHOLDER + CONSENT_MARKER,
+            test: function (t) {
+                t.update({ 'youtube-video': true, 'wishlist-enabled': true });
+                t.update({});
+                t.check('no loader', t.added().length === 0);
+            }
+        },
+        {
+            name: 'Consent mode: withdrawing consent removes the widgets from the page',
+            body: '<footer><div class="reviewforest-footer-widget container">' + PLACEHOLDER + '</div></footer>' + PLACEHOLDER + CONSENT_MARKER,
+            cookie: 'reviewforest-widgets=1',
+            test: function (t, w) {
+                t.check('loaded', t.added().length === 1);
+                t.update({ 'reviewforest-widgets': false });
+                t.check('placeholders removed', w.document.querySelectorAll('[class*="reviewforest-app-"]').length === 0);
+                t.check('footer container stays', w.document.querySelectorAll('.reviewforest-footer-widget').length === 1);
+            }
+        },
+        {
+            name: 'Consent mode: "false" for an entry that was never allowed keeps the placeholders, later consent still loads',
+            body: PLACEHOLDER + CONSENT_MARKER,
+            test: function (t, w) {
+                // Shopware 6.7 reports every optional cookie as false after "Only technically required" or a new
+                // consent round, also when it was never set.
+                t.update({ 'reviewforest-widgets': false, 'youtube-video': false });
+                t.check('placeholder kept', w.document.querySelectorAll('[class*="reviewforest-app-"]').length === 1);
+                t.update({ 'reviewforest-widgets': true });
+                t.check('loader added after the later consent', t.added().length === 1);
+            }
+        },
+        {
+            name: 'Consent mode: no widget on the page, no loader',
+            body: CONSENT_MARKER,
+            cookie: 'reviewforest-widgets=1',
+            test: function (t) {
+                t.update({ 'reviewforest-widgets': true });
+                t.check('no loader', t.added().length === 0);
+            }
+        },
+        {
+            name: 'Consent mode: a loader from the merchant\'s own embed code is not added a second time',
+            body: PLACEHOLDER + CONSENT_MARKER + '<script type="text/plain" src="' + LOADER + '"><\/script>',
+            cookie: 'reviewforest-widgets=1',
+            test: function (t) {
+                t.update({ 'reviewforest-widgets': true });
+                t.check('no second loader', t.added().length === 0);
+            }
+        },
+        {
+            name: 'Consent mode with Shopware\'s banner switched off: warning, and ReviewForestWidgets.load() for other consent tools',
+            body: PLACEHOLDER + CONSENT_MARKER,
+            shopwareBanner: false,
+            test: function (t, w) {
+                t.check('one warning', t.warnings.length === 1 && /ReviewForestWidgets\.load\(\)/.test(t.warnings[0]));
+                t.check('no loader yet', t.added().length === 0);
+                w.ReviewForestWidgets.load();
+                t.check('loader added by load()', t.added().length === 1 && t.added()[0].src === LOADER);
+            }
+        },
+        {
+            name: 'Load always or widgets off: the unused cookie entry is hidden, also when the settings open later',
+            body: PLACEHOLDER + UNUSED_MARKER,
+            test: function (t, w) {
+                t.check('no ReviewForestWidgets', typeof w.ReviewForestWidgets === 'undefined');
+                t.update({ 'reviewforest-widgets': true });
+                t.check('the consent logic is not active', t.added().length === 0);
+                var holder = w.document.createElement('div');
+                holder.innerHTML = COOKIE_SETTINGS;
+                w.document.body.appendChild(holder);
+                return t.settle().then(function () {
+                    t.check('ReviewForest entry hidden', w.document.getElementById('rf-entry').style.display === 'none');
+                    t.check('YouTube entry visible', w.document.getElementById('yt-entry').style.display === '');
+                });
+            }
+        },
+        {
+            name: 'Load always: an entry that is already in the page is hidden too',
+            body: COOKIE_SETTINGS + UNUSED_MARKER,
+            test: function (t, w) {
+                t.check('ReviewForest entry hidden', w.document.getElementById('rf-entry').style.display === 'none');
+                t.check('YouTube entry visible', w.document.getElementById('yt-entry').style.display === '');
+            }
+        },
+        {
+            name: 'Consent mode: the cookie entry stays visible',
+            body: COOKIE_SETTINGS + PLACEHOLDER + CONSENT_MARKER,
+            test: function (t, w) {
+                return t.settle().then(function () {
+                    t.check('ReviewForest entry visible', w.document.getElementById('rf-entry').style.display === '');
+                });
+            }
+        },
+        {
+            name: 'No marker (widgets switched off on this page): nothing happens',
+            body: PLACEHOLDER,
+            cookie: 'reviewforest-widgets=1',
+            test: function (t, w) {
+                t.update({ 'reviewforest-widgets': true });
+                t.check('no loader', t.added().length === 0);
+                t.check('no ReviewForestWidgets', typeof w.ReviewForestWidgets === 'undefined');
+            }
+        }
+    ];
+
+    var results = [];
+    var list = document.getElementById('results');
+
+    function frameDocument(scenario, index) {
+        // Runs in the frame before the storefront script: simulated cookie, recorder for the loader, test hooks.
+        var setup = '(' + function (cookie, banner, index) {
+            var added = [];
+            var warnings = [];
+            Object.defineProperty(document, 'cookie', { configurable: true, get: function () { return cookie; }, set: function () {} });
+            if (banner) {
+                window.useDefaultCookieConsent = true;
+            }
+            var originalAppend = HTMLHeadElement.prototype.appendChild;
+            HTMLHeadElement.prototype.appendChild = function (node) {
+                if (node && node.tagName === 'SCRIPT' && node.src && node.src.indexOf('https://widgets.reviewforest.org/') === 0) {
+                    added.push(node);
+                    return node;
+                }
+                return originalAppend.call(this, node);
+            };
+            console.warn = function (message) { warnings.push(String(message)); };
+            window.__rfTest = {
+                index: index,
+                warnings: warnings,
+                added: function () { return added.slice(); },
+                update: function (changes) {
+                    document.dispatchEvent(new CustomEvent('CookieConfiguration_Update', { detail: changes }));
+                },
+                settle: function () { return new Promise(function (resolve) { setTimeout(resolve, 0); }); }
+            };
+        } + ')(' + JSON.stringify(scenario.cookie || '') + ', ' + JSON.stringify(scenario.shopwareBanner !== false) + ', ' + index + ');';
+        return '<!doctype html><html><head><meta charset="utf-8"><script>' + setup + '<\/script></head><body>' +
+            scenario.body + '<script src="' + scriptUrl + '"><\/script></body></html>';
+    }
+
+    function render(entry) {
+        var item = document.createElement('li');
+        item.className = entry.ok ? 'pass' : 'fail';
+        item.textContent = (entry.ok ? 'PASS ' : 'FAIL ') + entry.scenario + ': ' + entry.check;
+        list.appendChild(item);
+    }
+
+    function runScenario(scenario, index) {
+        return new Promise(function (resolve) {
+            var frame = document.createElement('iframe');
+            var finished = false;
+            function finish(error) {
+                if (finished) {
+                    return;
+                }
+                finished = true;
+                if (error) {
+                    var entry = { scenario: scenario.name, check: 'error: ' + error, ok: false };
+                    results.push(entry);
+                    render(entry);
+                }
+                resolve();
+            }
+            frame.addEventListener('load', function () {
+                var w = frame.contentWindow;
+                var hooks = w.__rfTest;
+                if (!hooks) {
+                    finish('test hooks missing');
+                    return;
+                }
+                if (!w.document.querySelector('script[src="' + scriptUrl + '"]')) {
+                    finish('storefront script tag missing');
+                    return;
+                }
+                var t = {
+                    warnings: hooks.warnings,
+                    added: hooks.added,
+                    update: hooks.update,
+                    settle: hooks.settle,
+                    check: function (name, ok) {
+                        var entry = { scenario: scenario.name, check: name, ok: !!ok };
+                        results.push(entry);
+                        render(entry);
+                    }
+                };
+                try {
+                    Promise.resolve(scenario.test(t, w)).then(function () { finish(); }, function (error) { finish(String(error)); });
+                } catch (error) {
+                    finish(String(error));
+                }
+            });
+            setTimeout(function () { finish('timeout'); }, 5000);
+            frame.srcdoc = frameDocument(scenario, index);
+            document.body.appendChild(frame);
+        });
+    }
+
+    scenarios.reduce(function (chain, scenario, index) {
+        return chain.then(function () { return runScenario(scenario, index); });
+    }, Promise.resolve()).then(function () {
+        var failed = results.filter(function (entry) { return !entry.ok; });
+        document.getElementById('summary').textContent = (failed.length ? 'FAILED: ' : 'All passed: ') +
+            (results.length - failed.length) + ' of ' + results.length + ' checks passed (' + scriptPath + ').';
+        document.getElementById('summary').className = failed.length ? 'fail' : 'pass';
+        window.__rfResults = { done: true, script: scriptPath, total: results.length, failed: failed, results: results };
+    });
+})();
+</script>
+</body>
+</html>
