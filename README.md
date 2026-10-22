@@ -59,7 +59,7 @@ Notes from the first run (October 2026):
 - MongoDB 8 refuses to start on Docker Desktop's Linux kernel 7.0.12 (SERVER-121912), so the dev setup uses MongoDB 7.
 - Shopware 6.6.10+ only lets apps call public HTTPS targets; `dev/sync-app.sh` allows the Docker host for the local API.
 - dockware runs no message consumer; webhooks and flow actions wait in the queue until `messenger:consume` runs (the e2e script does that).
-- URLs that the browser opens (the admin page, the link to the Bewertungswald on the order confirmation page) point to `localhost:3000`; URLs the shop calls (registration, webhooks, flow actions) to `host.docker.internal:3000`. `bin/build.sh` replaces both with the release API URL.
+- In the development manifest and templates, URLs that the browser opens (the admin page, the link to the Bewertungswald on the order confirmation page) use localhost, URLs the shop calls (registration, webhooks, flow actions) the Docker host name. `bin/build.sh` replaces both with the release API URL.
 
 ## Build and release
 
