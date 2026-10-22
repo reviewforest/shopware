@@ -28,7 +28,7 @@
     <!--
         Admin page (RF-12249): connection check, price per tree and overview, served by the ReviewForest API.
         Shopware shows it under Extensions > ReviewForest and opens it from My extensions (main module).
-        The browser loads it, not the shop, so the development URL is localhost; bin/build.sh replaces it.
+        The merchant's browser loads it in an iframe, not the shop (development URL: see bin/build.sh).
     -->
     <admin>
         <module name="overview"
