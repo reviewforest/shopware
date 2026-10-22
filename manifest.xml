@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
     Local development manifest. bin/build.sh renders the release manifest from this file and
-    replaces the backend URL (http://host.docker.internal:3000) and removes the <secret>.
+    replaces the backend URL (http://host.docker.internal:3000, for the browser http://localhost:3000)
+    and removes the <secret>.
     Keep the technical <name> in sync with APP_NAME in bin/build.sh.
 -->
 <manifest xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -24,6 +25,21 @@
         <registrationUrl>http://host.docker.internal:3000/integrations/shopware/register</registrationUrl>
         <secret>local-dev-app-secret</secret>
     </setup>
+    <!--
+        Admin page (RF-12249): connection check, price per tree and overview, served by the ReviewForest API.
+        Shopware shows it under Extensions > ReviewForest and opens it from My extensions (main module).
+        The merchant's browser loads it in an iframe, not the shop (development URL: see bin/build.sh).
+    -->
+    <admin>
+        <module name="overview"
+                source="http://localhost:3000/integrations/shopware/admin"
+                parent="sw-extension"
+                position="50">
+            <label>ReviewForest</label>
+            <label lang="de-DE">ReviewForest</label>
+        </module>
+        <main-module source="http://localhost:3000/integrations/shopware/admin"/>
+    </admin>
     <permissions>
         <!-- Orders: read state, customer and language; write the ReviewForest custom fields. -->
         <read>order</read>
@@ -39,6 +55,8 @@
         <read>locale</read>
         <!-- The app's own settings per sales channel. -->
         <read>system_config</read>
+        <!-- Admin page (RF-12249): the sales channels and their names, to show the settings of each one. -->
+        <read>sales_channel</read>
     </permissions>
     <custom-fields>
         <custom-field-set>

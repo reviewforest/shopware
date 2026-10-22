@@ -2,6 +2,7 @@
 
 ## 0.2.0 (unreleased)
 
+- New page under Extensions > ReviewForest, also opened with "Open" in My extensions: whether the API key and forest ID work, with the connected Bewertungswald and a link to it, what is switched on per sales channel, the price per additional tree with an estimate for the month, the invitations of the last 30 days, the trees of this month and the latest orders with a problem. The app now also reads the sales channels (new permission), to show their settings and names.
 - Tree per order: every order that reaches the chosen state (shipped, paid or completed) gets a tree in your Bewertungswald. The trees of a day are ordered together once a day as additional trees, usually one invoice a day. Cancelled, returned or refunded orders get no tree.
 - Tree per order can be billed once a month instead of once a day (setting "Order and bill the trees"): the trees of a calendar month (UTC) are ordered together at the start of the next month, usually one invoice a month. The order confirmation page tells buyers when their tree is planted.
 - Optional monthly limit for tree per order ("At most this many trees per month"), per sales channel. Orders beyond it get no tree and show the reason "Monthly limit reached".

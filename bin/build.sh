@@ -53,6 +53,8 @@ stage = Path(sys.argv[1])
 mode, app_name, api_url = os.environ['BUILD_MODE'], os.environ['APP_NAME'], os.environ['API_URL'].rstrip('/')
 secret = os.environ.get('SHOPWARE_APP_SECRET', '')
 dev_url, dev_secret = 'http://host.docker.internal:3000', 'local-dev-app-secret'
+# The admin page is loaded by the browser, not by the shop, so the development manifest uses localhost for it.
+dev_browser_url = 'http://localhost:3000'
 
 parsed = urlparse(api_url)
 if parsed.scheme != 'https' or not parsed.hostname or parsed.hostname in ('localhost', 'host.docker.internal'):
@@ -69,7 +71,7 @@ for path in stage.rglob('*'):
         continue
     text = path.read_text(encoding='utf-8')
     original = text
-    text = text.replace(dev_url, api_url)
+    text = text.replace(dev_url, api_url).replace(dev_browser_url, api_url)
     if app_name != 'ReviewForest':
         text = text.replace('ReviewForest.config', f'{app_name}.config').replace('@ReviewForest/', f'@{app_name}/')
     if path.name == 'manifest.xml' and path.parent == stage:
@@ -89,13 +91,13 @@ if app_name != 'ReviewForest':
 
 # Fail closed: nothing from the development setup may remain in the package.
 leftovers = [str(p.relative_to(stage)) for p in stage.rglob('*') if p.is_file() and p.suffix != '.png'
-             and any(marker in p.read_text(encoding='utf-8', errors='ignore') for marker in ('host.docker.internal', dev_secret))]
+             and any(marker in p.read_text(encoding='utf-8', errors='ignore') for marker in ('host.docker.internal', dev_browser_url, dev_secret))]
 if leftovers:
     sys.exit(f'Development URL or secret left in: {", ".join(leftovers)}')
 manifest = (stage / 'manifest.xml').read_text(encoding='utf-8')
 if mode == 'store' and '<secret>' in manifest:
     sys.exit('Store build must not contain a secret')
-if re.search(r'url="http://|<registrationUrl>http://|<url>http://', manifest + (stage / 'Resources/flow.xml').read_text(encoding='utf-8')):
+if re.search(r'url="http://|source="http://|<registrationUrl>http://|<url>http://', manifest + (stage / 'Resources/flow.xml').read_text(encoding='utf-8')):
     sys.exit('Release URLs must use https')
 PY
 

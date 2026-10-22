@@ -12,12 +12,13 @@
             <helpText>Create the key in ReviewForest under Integrations, API. Needed for review invitations and tree per order; the widgets work without it.</helpText>
             <helpText lang="de-DE">Den Schlüssel erstellst du in ReviewForest unter Integrationen, API. Nötig für Bewertungseinladungen und Baum pro Bestellung; die Widgets funktionieren auch ohne.</helpText>
         </input-field>
+        <!-- Admin page (RF-12249): the help text says where the connection can be checked. -->
         <input-field type="text">
             <name>forestId</name>
             <label>Forest ID</label>
             <label lang="de-DE">ID des Bewertungswalds</label>
-            <helpText>The ID of the Bewertungswald that receives the invitations and the order trees of this sales channel.</helpText>
-            <helpText lang="de-DE">Die ID des Bewertungswalds, an den die Einladungen und die Bestellbäume dieses Verkaufskanals gehen.</helpText>
+            <helpText>The ID of the Bewertungswald that receives the invitations and the order trees of this sales channel. After saving, Extensions > ReviewForest shows whether API key and forest ID work.</helpText>
+            <helpText lang="de-DE">Die ID des Bewertungswalds, an den die Einladungen und die Bestellbäume dieses Verkaufskanals gehen. Ob API-Schlüssel und ID stimmen, siehst du nach dem Speichern unter Erweiterungen > ReviewForest.</helpText>
         </input-field>
     </card>
 

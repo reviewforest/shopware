@@ -26,7 +26,9 @@ What it checks, as a buyer and as the merchant would do it:
      billing code (no Stripe products in the dev database), so it ends "failed: order_rejected".
      The tree card links to the Bewertungswald (the API redirects the forest ID to the forest page), and a
      planted order links to its tree.
-  8. test mode: the buyer still sees consent question and tree choice, shipping schedules no invitation and
+  8. the admin page under Extensions > ReviewForest: signed like the admin signs it, framed only by this shop,
+     shows the connection and lists the order of step 7 as a problem; a changed signature opens nothing
+  9. test mode: the buyer still sees consent question and tree choice, shipping schedules no invitation and
      adds no tree (the order says why); switched on later, it drops a waiting invitation at due time and the
      daily run cancels a waiting tree. Test mode is switched off again at the end, also after an error.
 Only standard library; the dockware admin login admin/shopware is the image's default for local shops.
@@ -45,7 +47,8 @@ import uuid
 
 MONGO = 'mongodb://localhost:27019/rf_shopware_dev?replicaSet=rs0&directConnection=true'
 CONTAINER = {8067: 'reviewforest-shopware-dev-sw67-1', 8066: 'reviewforest-shopware-dev-sw66-1'}
-# The shops reach the local API as host.docker.internal:3000; this script runs on the host.
+# The local ReviewForest API as this script and the browser reach it (admin page, links on the finish page);
+# the shops reach it as host.docker.internal:3000.
 API = 'http://localhost:3000'
 results = []
 
@@ -191,7 +194,7 @@ def place_and_ship_with_consent(port, shop, admin, product_id, email):
 
 
 def check_test_mode(port, shop, admin, product_id, run):
-    # 8. test mode (RF-12253): set globally, like tree per order in section 7, and always switched off again.
+    # 9. test mode (RF-12253): set globally, like tree per order in section 7, and always switched off again.
     try:
         admin.request('POST', '/api/_action/system-config', {'ReviewForest.config.testMode': True, 'ReviewForest.config.treePerOrderEnabled': True})
         order_id, finish_html = place_and_ship_with_consent(port, shop, admin, product_id, f'e2e-test-mode-{run}@example.com')
@@ -491,6 +494,23 @@ def main():
     _, html = shop.get(f'/checkout/finish?orderId={planted_id}')
     check('the confirmation page of a planted order links to the tree', f'<a href="{tree_url}" target="_blank" rel="noopener">' in html)
     admin.request('POST', '/api/_action/system-config', {'ReviewForest.config.treePerOrderEnabled': False})
+
+    # 8. admin page (RF-12249): the admin signs the module URL when it opens the page; do the same and load it
+    signed = admin.request('POST', '/api/_action/extension-sdk/sign-uri', {'appName': 'ReviewForest', 'uri': f'{API}/integrations/shopware/admin'})['uri']
+    with urllib.request.urlopen(signed) as response:
+        page_status, policy, page = response.status, response.headers.get('Content-Security-Policy', ''), response.read().decode('utf-8', 'replace')
+    check('the admin page loads for the shop that signed', page_status == 200 and "postMessage('sw-app-loaded'" in page, f'HTTP {page_status}')
+    check('only this shop may frame the admin page', f'frame-ancestors {base}' in policy, policy)
+    check('the admin page shows the connection to the seeded forest', '>Verbunden<' in page or '>Connected<' in page)
+    if record.get('status') == 'failed':
+        check('the admin page lists the order whose tree was not planted', f'#/sw/order/detail/{order_id}/details' in page)
+    tampered = signed[:-1] + ('0' if signed[-1] != '0' else '1')
+    try:
+        urllib.request.urlopen(tampered)
+        tampered_status, tampered_policy = 200, ''
+    except urllib.error.HTTPError as error:
+        tampered_status, tampered_policy = error.code, error.headers.get('Content-Security-Policy', '')
+    check('a changed signature opens nothing', tampered_status == 401 and "frame-ancestors 'none'" in tampered_policy, f'HTTP {tampered_status}')
 
     check_test_mode(args.port, shop, admin, product['id'], run)
 

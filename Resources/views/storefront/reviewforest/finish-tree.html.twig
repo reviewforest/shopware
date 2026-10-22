@@ -113,13 +113,13 @@
             {#
                 RF-12251: a link to the shop's Bewertungswald, and once the tree is planted to the tree itself.
                 The storefront only knows the forest ID, so the forest link goes through the ReviewForest API, which
-                redirects to the forest page's current address (bin/build.sh puts the release API URL in place of the
-                development one). The tree link is written to the order by ReviewForest when it plants the tree.
+                redirects to the forest page's current address. The buyer's browser opens it, so the development URL is
+                localhost, like the admin page; bin/build.sh puts the release API URL in its place. The tree link is written to the order by ReviewForest when it plants the tree.
             #}
             {% set rfForestId = config('ReviewForest.config.forestId')|default('')|trim %}
             {% set rfPageLang = rfLocale|lower|slice(0, 2) %}
             {% set rfForestUrl = rfForestId matches '/^[0-9a-fA-F]{24}$/'
-                ? 'http://host.docker.internal:3000/integrations/shopware/forest-page/' ~ rfForestId ~ (rfPageLang in ['de', 'en', 'fr'] ? '?lang=' ~ rfPageLang : '')
+                ? 'http://localhost:3000/integrations/shopware/forest-page/' ~ rfForestId ~ (rfPageLang in ['de', 'en', 'fr'] ? '?lang=' ~ rfPageLang : '')
                 : '' %}
             {% set rfTreeUrl = (rfOrder.customFields ?? {})['reviewforest_tree_url'] ?? '' %}
             {% set rfTreeLink = rfTreePlanted and (rfTreeUrl starts with 'https://' or rfTreeUrl starts with 'http://') %}
