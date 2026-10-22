@@ -16,6 +16,8 @@ What it checks, as a buyer and as the merchant would do it:
   4. order cancelled -> invitation cancelled
   5. second order with consent "no" -> shipped -> nothing scheduled; a no cannot become a yes
   6. yes, shipped, then withdrawn on the finish page -> the invitation is skipped at due time
+  6b. the job carries the shop as sender name, the shop's address as reply-to and a copy of the consent record (in 3);
+     a consent record edited in the admin after scheduling skips the invitation (consent_record_changed)
   7. tree per order: the buyer names the tree on the finish page, shipped adds it, a cancelled order cancels
      it, and the daily run checks the order against the shop and reports back. Locally the run stops in the
      billing code (no Stripe products in the dev database), so it ends "failed: order_rejected".
@@ -262,6 +264,26 @@ def main():
     check('invitation status written to the order', status_field == 'scheduled' and bool(custom.get('reviewforest_invitation_date')), json.dumps(custom))
     subject = mongo(f"db.invitationJobs.findOne({{externalRef: /{order_id}/}}).payload.subject")
     check('the invitation subject names the shop', subject.startswith(('Ihre Bewertung für ', 'Deine Bewertung für ', 'Your review for ')), subject)
+    # RF-12252: the shop as sender name, replies to the shop's address, ReviewForest's own copy of the consent record.
+    payload = json.loads(mongo(f"JSON.stringify(db.invitationJobs.findOne({{externalRef: /{order_id}/}}).payload)") or '{}')
+    check('the invitation comes from the shop über/via ReviewForest',
+          str(payload.get('senderName', '')).endswith((' über ReviewForest', ' via ReviewForest')), str(payload.get('senderName')))
+    # Like the API: the value set for the order's sales channel wins over the global one.
+    basic = admin.request('GET', '/api/_action/system-config?domain=core.basicInformation')
+    channel_basic = admin.request('GET', f"/api/_action/system-config?domain=core.basicInformation&salesChannelId={order['salesChannelId']}")
+    shop_email = next((str(value).strip() for value in (channel_basic.get('core.basicInformation.email'), basic.get('core.basicInformation.email'))
+                       if isinstance(value, str) and value.strip()), '')
+    # Same rule as the API (shopReplyTo): ASCII dot-atom with the characters SendGrid documents, a real domain, length limits.
+    atext = r"[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]"
+    plain_address = (len(shop_email) <= 254 and len(shop_email.split('@')[0]) <= 64 and
+                     re.fullmatch(rf'{atext}+(\.{atext}+)*@([A-Za-z0-9]([A-Za-z0-9-]{{0,61}}[A-Za-z0-9])?\.)+([A-Za-z]{{2,63}}|xn--[A-Za-z0-9-]{{1,59}})', shop_email))
+    reply_to = (payload.get('replyTo') or {}).get('email')
+    check('replies go to the shop address from the basic information (none without a plain address)',
+          reply_to == shop_email if plain_address else reply_to is None, f'{reply_to} / {shop_email}')
+    copy = payload.get('consent') or {}
+    check('ReviewForest keeps its own copy of the consent record',
+          copy.get('answer') == 'yes' and copy.get('source') == 'finish_dialog' and str(copy.get('textVersion', '')).startswith('rf-')
+          and bool(copy.get('answeredAt')) and not copy.get('withdrawnAt'), json.dumps(copy))
 
     # 4. cancelled -> cancelled
     admin.request('POST', f'/api/_action/order/{order_id}/state/cancel')
@@ -299,6 +321,21 @@ def main():
     mongo(f"db.invitationJobs.updateOne({{externalRef: /{order_id}/, status: 'scheduled'}}, {{$set: {{dueAt: new Date()}}}})")
     skipped = wait_for(lambda: mongo(f"db.invitationJobs.findOne({{externalRef: /{order_id}/}}).statusReason") == 'no_consent', timeout=30)
     check('withdrawn consent skips the invitation at due time', bool(skipped))
+
+    # 6b. RF-12252: the consent record is edited in the admin after scheduling -> skipped at due time with its own reason
+    order_id, finish_html = place_guest_order(shop, product['id'], f'e2e-edited-{run}@example.com')
+    deep_link = re.search(r'name="deepLinkCode" value="([^"]+)"', finish_html).group(1)
+    shop.post_json('/storefront/script/reviewforest-consent', {'orderId': order_id, 'deepLinkCode': deep_link, 'source': 'finish_dialog', 'consent': 'yes'})
+    order = admin.search('order', {'ids': [order_id], 'associations': {'deliveries': {}}})[0]
+    admin.request('POST', f"/api/_action/order_delivery/{order['deliveries'][0]['id']}/state/ship")
+    consume_queue(args.port)
+    wait_for(lambda: mongo(f"db.invitationJobs.countDocuments({{externalRef: /{order_id}/, status: 'scheduled'}})") == '1')
+    # Like a merchant who changes the time of the answer in the order's custom fields and saves the order.
+    admin.request('PATCH', f'/api/order/{order_id}', {'customFields': {'reviewforest_consent_at': '2026-01-05T10:00:00+00:00'}})
+    mongo(f"db.invitationJobs.updateOne({{externalRef: /{order_id}/, status: 'scheduled'}}, {{$set: {{dueAt: new Date()}}}})")
+    skipped = wait_for(lambda: mongo(f"db.invitationJobs.findOne({{externalRef: /{order_id}/}}).statusReason") == 'consent_record_changed', timeout=30)
+    reason = wait_for(lambda: (admin.search('order', {'ids': [order_id]})[0].get('customFields') or {}).get('reviewforest_invitation_reason') == 'consent_record_changed')
+    check('a consent record changed after scheduling skips the invitation, the order shows why', bool(skipped) and bool(reason))
 
     # 7. tree per order
     admin.request('POST', '/api/_action/system-config', {'ReviewForest.config.treePerOrderEnabled': True})

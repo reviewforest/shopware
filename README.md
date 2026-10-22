@@ -5,6 +5,8 @@ Shopware app (app system, no PHP in the shop) for Shopware 6.6 and 6.7, includin
 - **Widgets without code:** shows your ReviewForest widgets (floating badge, footer widget, more widget IDs) on every shop page, configurable per sales channel. Checkout and customer account pages stay free of the widget script unless you switch that on.
 - **Review invitations after shipping:** a set number of days after shipping (or payment, or completion) the buyer gets one review invitation, but only if they agreed.
 - **Consent:** either a question with "Yes, please" and "No, thanks" on the order confirmation page, or an unchecked checkbox in the checkout. Answer, time, source and text version are stored on the order.
+- **Sender and replies (0.2.0):** the invitation comes from "<shop name> über ReviewForest" (German orders) or "<shop name> via ReviewForest", sent from noreply-invite@reviewforest.org. Replies go to the shop's email address from Settings > Basic information.
+- **Consent copy (0.2.0):** when an invitation is scheduled, ReviewForest keeps its own copy of the consent record. If the record on the order is changed before sending, the invitation is not sent ("Consent record on the order was changed").
 - **Tree per order (0.2.0):** every order that reaches the chosen state gets a tree in your Bewertungswald, ordered once a day as additional trees. Buyers choose on the order confirmation page whether the tree shows their name, their initials, a dedication or no name.
 - **Safety nets:** cancelled, returned or refunded orders cancel the waiting invitation and tree; status, reason and date of both are shown on the order in the admin language; Flow Builder action "Schedule review invitation" for your own rules.
 
