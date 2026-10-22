@@ -303,14 +303,44 @@
         document.head.appendChild(script);
     }
 
-    function removeWidgets() {
-        // Consent withdrawn: the widgets disappear from this page, and the next page does not load the loader.
+    /*
+     * Consent withdrawn after the widgets were loaded: they disappear from this page, and the next page does not load
+     * the loader. They are hidden rather than deleted, because the loader reads the placeholders only once: if the
+     * visitor agrees again on the same page, for example after Shopware asked again because the cookie configuration
+     * changed, the same widgets come back.
+     */
+    var hiddenWidgets = null;
+
+    function hideWidgets() {
+        if (hiddenWidgets) {
+            return;
+        }
+        hiddenWidgets = [];
         var placeholders = document.querySelectorAll(WIDGET_PLACEHOLDER_SELECTOR);
         for (var i = 0; i < placeholders.length; i++) {
-            if (placeholders[i].parentNode) {
-                placeholders[i].parentNode.removeChild(placeholders[i]);
+            var style = placeholders[i].style;
+            hiddenWidgets.push({
+                element: placeholders[i],
+                display: style.getPropertyValue('display'),
+                priority: style.getPropertyPriority('display'),
+            });
+            style.setProperty('display', 'none', 'important');
+        }
+    }
+
+    function showWidgets() {
+        if (!hiddenWidgets) {
+            return;
+        }
+        for (var i = 0; i < hiddenWidgets.length; i++) {
+            var entry = hiddenWidgets[i];
+            if (entry.display) {
+                entry.element.style.setProperty('display', entry.display, entry.priority);
+            } else {
+                entry.element.style.removeProperty('display');
             }
         }
+        hiddenWidgets = null;
     }
 
     function initWidgetConsent() {
@@ -320,12 +350,13 @@
                 return; // other cookies changed
             }
             if (updated[WIDGET_CONSENT_COOKIE]) {
+                showWidgets();
                 loadWidgets();
             } else if (loaderPresent()) {
                 // Only after the widgets were loaded. Shopware also reports "false" for entries that were never
                 // allowed (button "Only technically required", or a new consent round after a change of the cookie
-                // configuration); the placeholders stay, so consent given later on the same page still works.
-                removeWidgets();
+                // configuration); then nothing changes, so consent given later on the same page still loads them.
+                hideWidgets();
             }
         });
         // For consent tools that replace Shopware's cookie banner: call ReviewForestWidgets.load() after consent.

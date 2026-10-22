@@ -87,14 +87,37 @@
             }
         },
         {
-            name: 'Consent mode: withdrawing consent removes the widgets from the page',
-            body: '<footer><div class="reviewforest-footer-widget container">' + PLACEHOLDER + '</div></footer>' + PLACEHOLDER + CONSENT_MARKER,
+            name: 'Consent mode: withdrawing consent hides the widgets, agreeing again on the same page shows them again',
+            body: '<footer><div class="reviewforest-footer-widget container">' +
+                '<div class="reviewforest-app-11111111-2222-4333-8444-666666666666" style="display: flex"></div></div></footer>' +
+                PLACEHOLDER + CONSENT_MARKER,
             cookie: 'reviewforest-widgets=1',
             test: function (t, w) {
+                var placeholders = w.document.querySelectorAll('[class*="reviewforest-app-"]');
+                function hidden(element) { return w.getComputedStyle(element).display === 'none'; }
                 t.check('loaded', t.added().length === 1);
                 t.update({ 'reviewforest-widgets': false });
-                t.check('placeholders removed', w.document.querySelectorAll('[class*="reviewforest-app-"]').length === 0);
+                t.check('all widgets hidden', hidden(placeholders[0]) && hidden(placeholders[1]));
                 t.check('footer container stays', w.document.querySelectorAll('.reviewforest-footer-widget').length === 1);
+                t.update({ 'reviewforest-widgets': false });
+                t.update({ 'reviewforest-widgets': true });
+                t.check('widgets visible again', !hidden(placeholders[0]) && !hidden(placeholders[1]));
+                t.check('inline display of the page restored', placeholders[0].style.display === 'flex' && placeholders[1].style.display === '');
+                t.check('loader still added only once', t.added().length === 1);
+            }
+        },
+        {
+            name: 'Consent mode: Shopware asks again after a change of the cookie configuration (reset to false), then the visitor agrees',
+            body: PLACEHOLDER + CONSENT_MARKER,
+            cookie: 'reviewforest-widgets=1',
+            test: function (t, w) {
+                var placeholder = w.document.querySelector('[class*="reviewforest-app-"]');
+                t.check('loaded with the earlier consent', t.added().length === 1);
+                // Shopware 6.7 resets optional cookies when its cookie hash changed and reports them as false.
+                t.update({ 'reviewforest-widgets': false, 'youtube-video': false });
+                t.check('hidden while Shopware asks again', w.getComputedStyle(placeholder).display === 'none');
+                t.update({ 'reviewforest-widgets': true, 'youtube-video': true });
+                t.check('visible after the new consent', w.getComputedStyle(placeholder).display !== 'none' && t.added().length === 1);
             }
         },
         {
