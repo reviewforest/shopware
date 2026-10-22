@@ -21,6 +21,20 @@
         </input-field>
     </card>
 
+    <!-- Test mode (RF-12253): read by the ReviewForest API before it schedules, sends or orders anything. -->
+    <card>
+        <title>Test and staging shops</title>
+        <title lang="de-DE">Test- und Staging-Shops</title>
+        <input-field type="bool">
+            <name>testMode</name>
+            <label>Test mode: no invitations, no trees</label>
+            <label lang="de-DE">Testmodus: keine Einladungen, keine Bäume</label>
+            <defaultValue>false</defaultValue>
+            <helpText>For test and staging shops. Buyers still see the consent question and the choice for their tree. While test mode is on, ReviewForest sends no invitations and orders no trees, not even those already scheduled, and makes up none of it later. The order shows the reason "Test mode: nothing sent" or "Test mode: no tree". If consent is missing or the API key is wrong, the order shows that reason as usual. Leave it off in your live shop.</helpText>
+            <helpText lang="de-DE">Für Test- und Staging-Shops. Käufer sehen weiterhin die Frage nach der Einwilligung und die Auswahl für ihren Baum. Solange der Testmodus an ist, verschickt ReviewForest keine Einladungen und bestellt keine Bäume, auch keine bereits geplanten, und holt nichts davon nach. An der Bestellung steht dann als Grund "Testmodus: nichts verschickt" oder "Testmodus: kein Baum". Fehlt die Einwilligung oder stimmt der API-Schlüssel nicht, steht dort wie sonst dieser Grund. Im Live-Shop ausgeschaltet lassen.</helpText>
+        </input-field>
+    </card>
+
     <card>
         <title>Widgets</title>
         <title lang="de-DE">Widgets</title>
