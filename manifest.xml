@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
     Local development manifest. bin/build.sh renders the release manifest from this file and
-    replaces the backend URL (http://host.docker.internal:3000) and removes the <secret>.
+    replaces the backend URL (http://host.docker.internal:3000, for the browser http://localhost:3000)
+    and removes the <secret>.
     Keep the technical <name> in sync with APP_NAME in bin/build.sh.
 -->
 <manifest xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -24,6 +25,21 @@
         <registrationUrl>http://host.docker.internal:3000/integrations/shopware/register</registrationUrl>
         <secret>local-dev-app-secret</secret>
     </setup>
+    <!--
+        Admin page (RF-12249): connection check, price per tree and overview, served by the ReviewForest API.
+        Shopware shows it under Extensions > ReviewForest and opens it from My extensions (main module).
+        The merchant's browser loads it in an iframe, not the shop (development URL: see bin/build.sh).
+    -->
+    <admin>
+        <module name="overview"
+                source="http://localhost:3000/integrations/shopware/admin"
+                parent="sw-extension"
+                position="50">
+            <label>ReviewForest</label>
+            <label lang="de-DE">ReviewForest</label>
+        </module>
+        <main-module source="http://localhost:3000/integrations/shopware/admin"/>
+    </admin>
     <permissions>
         <!-- Orders: read state, customer and language; write the ReviewForest custom fields. -->
         <read>order</read>
@@ -39,6 +55,8 @@
         <read>locale</read>
         <!-- The app's own settings per sales channel. -->
         <read>system_config</read>
+        <!-- Admin page (RF-12249): the sales channels and their names, to show the settings of each one. -->
+        <read>sales_channel</read>
     </permissions>
     <custom-fields>
         <custom-field-set>
@@ -55,8 +73,8 @@
                 <single-select name="reviewforest_consent">
                     <label>Review invitation consent</label>
                     <label lang="de-DE">Einwilligung Bewertungseinladung</label>
-                    <help-text>The buyer's answer. Record of the consent: please do not change it by hand.</help-text>
-                    <help-text lang="de-DE">Die Antwort des Käufers. Nachweis der Einwilligung: bitte nicht von Hand ändern.</help-text>
+                    <help-text>The buyer's answer. Record of the consent: please do not change it by hand. ReviewForest keeps its own copy when the invitation is scheduled; if the record is changed afterwards, the invitation is not sent.</help-text>
+                    <help-text lang="de-DE">Die Antwort des Käufers. Nachweis der Einwilligung: bitte nicht von Hand ändern. ReviewForest speichert beim Planen der Einladung eine eigene Kopie; wird der Nachweis danach geändert, wird die Einladung nicht verschickt.</help-text>
                     <position>1</position>
                     <options>
                         <option value="yes">
@@ -155,6 +173,12 @@
                             <name>No consent from the buyer</name>
                             <name lang="de-DE">Keine Einwilligung des Käufers</name>
                         </option>
+                        <!-- RF-12252 (invitation-sender): the consent fields differ from ReviewForest's copy taken when the invitation was scheduled. -->
+                        <option value="consent_record_changed">
+                            <name>Consent record on the order was changed</name>
+                            <name lang="de-DE">Einwilligungsnachweis an der Bestellung geändert</name>
+                        </option>
+                        <!-- /RF-12252 -->
                         <option value="customer_group_excluded">
                             <name>Customer group excluded</name>
                             <name lang="de-DE">Kundengruppe ausgeschlossen</name>
@@ -166,6 +190,11 @@
                         <option value="invitations_disabled">
                             <name>Invitations switched off</name>
                             <name lang="de-DE">Einladungen ausgeschaltet</name>
+                        </option>
+                        <!-- Test mode (RF-12253), setting testMode in config.xml. -->
+                        <option value="test_mode">
+                            <name>Test mode: nothing sent</name>
+                            <name lang="de-DE">Testmodus: nichts verschickt</name>
                         </option>
                         <option value="trigger_state_changed">
                             <name>Order status was reset</name>
@@ -307,8 +336,9 @@
                     <position>11</position>
                     <options>
                         <option value="pending">
-                            <name>Planted with the next daily order of trees</name>
-                            <name lang="de-DE">Wird mit der nächsten täglichen Baumbestellung gepflanzt</name>
+                            <!-- RF-12250: true for daily and monthly billing (no "daily"). -->
+                            <name>Planted with the next order of trees</name>
+                            <name lang="de-DE">Wird mit der nächsten Baumbestellung gepflanzt</name>
                         </option>
                         <option value="planted">
                             <name>Planted</name>
@@ -329,14 +359,28 @@
                     <label lang="de-DE">Baum gepflanzt am</label>
                     <position>12</position>
                 </datetime>
+                <!-- RF-12251: link to the planted tree, written by ReviewForest with the status "planted". -->
+                <text name="reviewforest_tree_url">
+                    <label>Link to the tree</label>
+                    <label lang="de-DE">Link zum Baum</label>
+                    <help-text>Set by ReviewForest once the tree is planted. You can send the link to the buyer: it opens the tree in your review forest.</help-text>
+                    <help-text lang="de-DE">Von ReviewForest gesetzt, sobald der Baum gepflanzt ist. Den Link kannst du dem Käufer schicken: er öffnet den Baum in deinem Bewertungswald.</help-text>
+                    <position>13</position>
+                </text>
+                <!-- RF-12251: position 13 to 14, so the link comes right after the planting date. -->
                 <single-select name="reviewforest_tree_reason">
                     <label>Reason (tree)</label>
                     <label lang="de-DE">Grund (Baum)</label>
-                    <position>13</position>
+                    <position>14</position>
                     <options>
                         <option value="trees_disabled">
                             <name>Tree per order switched off</name>
                             <name lang="de-DE">Baum pro Bestellung ausgeschaltet</name>
+                        </option>
+                        <!-- Test mode (RF-12253), setting testMode in config.xml. -->
+                        <option value="test_mode">
+                            <name>Test mode: no tree</name>
+                            <name lang="de-DE">Testmodus: kein Baum</name>
                         </option>
                         <option value="order_cancelled">
                             <name>Order cancelled</name>
@@ -427,9 +471,16 @@
                             <name lang="de-DE">Abrechnung unklar, ReviewForest prüft</name>
                         </option>
                         <option value="interrupted">
-                            <name>Daily order interrupted, ReviewForest checks</name>
-                            <name lang="de-DE">Tägliche Bestellung unterbrochen, ReviewForest prüft</name>
+                            <!-- RF-12250: true for daily and monthly billing (no "daily"). -->
+                            <name>Order of the trees interrupted, ReviewForest checks</name>
+                            <name lang="de-DE">Baumbestellung unterbrochen, ReviewForest prüft</name>
                         </option>
+                        <!-- RF-12250 tree billing: monthly limit (treeMonthlyLimit in config.xml). -->
+                        <option value="monthly_limit_reached">
+                            <name>Monthly limit reached</name>
+                            <name lang="de-DE">Monatsgrenze erreicht</name>
+                        </option>
+                        <!-- /RF-12250 tree billing -->
                         <option value="other">
                             <name>Other reason</name>
                             <name lang="de-DE">Anderer Grund</name>
@@ -452,4 +503,25 @@
         <webhook name="orderReturned" url="http://host.docker.internal:3000/integrations/shopware/webhooks" event="state_enter.order_delivery.state.returned"/>
         <webhook name="orderRefunded" url="http://host.docker.internal:3000/integrations/shopware/webhooks" event="state_enter.order_transaction.state.refunded"/>
     </webhooks>
+    <!--
+        Widget consent (RF-12254): "ReviewForest" as an entry of Shopware's comfort features in the cookie settings,
+        next to YouTube and Vimeo. On consent Shopware sets the cookie reviewforest-widgets=1 for 30 days (like its own
+        entries) and the storefront script loads the widgets. Name and description are storefront snippets
+        (Resources/snippet). No snippet-description on the group: Shopware 6.7 would overwrite the description of
+        its own group with it. Resources/scripts/cookie-group-collect removes the entry when it has no effect.
+    -->
+    <cookies>
+        <group>
+            <snippet-name>cookie.groupComfortFeatures</snippet-name>
+            <entries>
+                <cookie>
+                    <cookie>reviewforest-widgets</cookie>
+                    <snippet-name>reviewForestApp.cookie.widgets</snippet-name>
+                    <snippet-description>reviewForestApp.cookie.widgetsDescription</snippet-description>
+                    <value>1</value>
+                    <expiration>30</expiration>
+                </cookie>
+            </entries>
+        </group>
+    </cookies>
 </manifest>

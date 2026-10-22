@@ -3,8 +3,8 @@
     shop's Bewertungswald (with name, initials, a dedication or without a name).
     Works without JavaScript (plain form post, the script endpoint redirects back here); with JavaScript the
     choice is sent in the background. The choice is written to the order custom fields by
-    Resources/scripts/storefront-reviewforest-tree; the ReviewForest API reads it in the daily run that orders
-    the trees.
+    Resources/scripts/storefront-reviewforest-tree; the ReviewForest API reads it in the run that orders the
+    trees (the next day, or with monthly billing at the start of the next month).
 #}
 {% set rfOrder = page.order %}
 {% set rfTreeStatus = (rfOrder.customFields ?? {})['reviewforest_tree_status'] ?? '' %}
@@ -59,9 +59,15 @@
                     {% set rfShopOrDefault = rfShop ?: (rfDe ? 'diesem Shop' : 'this shop') %}
                     {% set rfShopSubject = rfShop ?: (rfDe ? 'dieser Shop' : 'this shop') %}
                     {% set rfTrigger = config('ReviewForest.config.treeTrigger')|default('shipped') %}
-                    {% set rfWhen = rfTrigger == 'paid'
-                        ? (rfDe ? 'kurz nach Ihrer Zahlung' : 'shortly after your payment')
-                        : (rfTrigger == 'completed' ? (rfDe ? 'kurz nach Abschluss der Bestellung' : 'shortly after the order is completed') : (rfDe ? 'kurz nach dem Versand' : 'shortly after shipping')) %}
+                    {# RF-12250: with monthly billing the trees of a month are ordered at the start of the next month. #}
+                    {% set rfMonthly = config('ReviewForest.config.treeBilling') is same as('monthly') %}
+                    {% set rfWhen = rfMonthly
+                        ? (rfTrigger == 'paid'
+                            ? (rfDe ? 'zu Beginn des Monats nach Ihrer Zahlung' : 'at the start of the month after your payment')
+                            : (rfTrigger == 'completed' ? (rfDe ? 'zu Beginn des Monats nach Abschluss der Bestellung' : 'at the start of the month after the order is completed') : (rfDe ? 'zu Beginn des Monats nach dem Versand' : 'at the start of the month after shipping')))
+                        : (rfTrigger == 'paid'
+                            ? (rfDe ? 'kurz nach Ihrer Zahlung' : 'shortly after your payment')
+                            : (rfTrigger == 'completed' ? (rfDe ? 'kurz nach Abschluss der Bestellung' : 'shortly after the order is completed') : (rfDe ? 'kurz nach dem Versand' : 'shortly after shipping'))) %}
                     <p>
                         {{ rfDe
                             ? 'Wir pflanzen ihn ' ~ rfWhen ~ ', unabhängig von einer Bewertung. Er erscheint im Bewertungswald von ' ~ rfShopOrDefault ~ ', einer öffentlichen Seite mit allen Bäumen, die ' ~ rfShopSubject ~ ' gepflanzt hat. Wie soll Ihr Baum dort erscheinen?'
@@ -103,6 +109,32 @@
                         </span>
                     </div>
                 </form>
+            {% endif %}
+            {#
+                RF-12251: a link to the shop's Bewertungswald, and once the tree is planted to the tree itself.
+                The storefront only knows the forest ID, so the forest link goes through the ReviewForest API, which
+                redirects to the forest page's current address. The buyer's browser opens it, so the development URL is
+                localhost, like the admin page; bin/build.sh puts the release API URL in its place. The tree link is written to the order by ReviewForest when it plants the tree.
+            #}
+            {% set rfForestId = config('ReviewForest.config.forestId')|default('')|trim %}
+            {% set rfPageLang = rfLocale|lower|slice(0, 2) %}
+            {% set rfForestUrl = rfForestId matches '/^[0-9a-fA-F]{24}$/'
+                ? 'http://localhost:3000/integrations/shopware/forest-page/' ~ rfForestId ~ (rfPageLang in ['de', 'en', 'fr'] ? '?lang=' ~ rfPageLang : '')
+                : '' %}
+            {% set rfTreeUrl = (rfOrder.customFields ?? {})['reviewforest_tree_url'] ?? '' %}
+            {% set rfTreeLink = rfTreePlanted and (rfTreeUrl starts with 'https://' or rfTreeUrl starts with 'http://') %}
+            {% set rfLinkUrl = rfTreeLink ? rfTreeUrl : rfForestUrl %}
+            {% if rfTreeLink %}
+                {% set rfLinkText = rfDe ? 'Ihren Baum im Bewertungswald ansehen' : 'View your tree in the review forest' %}
+            {% elseif rfShop %}
+                {% set rfLinkText = rfDe ? 'Zum Bewertungswald von ' ~ rfShop : 'View the review forest of ' ~ rfShop %}
+            {% else %}
+                {% set rfLinkText = rfDe ? 'Zum Bewertungswald dieses Shops' : "View this shop's review forest" %}
+            {% endif %}
+            {% if rfLinkUrl %}
+                <p class="reviewforest-tree-link mt-3 mb-0">
+                    <a href="{{ rfLinkUrl }}" target="_blank" rel="noopener">{{ rfLinkText }}<span class="visually-hidden"> {{ rfDe ? '(öffnet in einem neuen Tab)' : '(opens in a new tab)' }}</span></a>
+                </p>
             {% endif %}
         </div>
     </div>
