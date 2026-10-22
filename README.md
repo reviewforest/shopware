@@ -7,6 +7,7 @@ Shopware app (app system, no PHP in the shop) for Shopware 6.6 and 6.7, includin
 - **Consent:** either a question with "Yes, please" and "No, thanks" on the order confirmation page, or an unchecked checkbox in the checkout. Answer, time, source and text version are stored on the order.
 - **Tree per order (0.2.0):** every order that reaches the chosen state gets a tree in your Bewertungswald, ordered once a day as additional trees. Buyers choose on the order confirmation page whether the tree shows their name, their initials, a dedication or no name.
 - **Safety nets:** cancelled, returned or refunded orders cancel the waiting invitation and tree; status, reason and date of both are shown on the order in the admin language; Flow Builder action "Schedule review invitation" for your own rules.
+- **Overview page (0.2.0):** Extensions > ReviewForest shows per sales channel whether the API key and forest ID work, the connected Bewertungswald, what is switched on and the price per additional tree, plus the invitations of the last 30 days, the trees of this month and the latest orders with a problem. The ReviewForest API serves it; Shopware shows it in an iframe and signs the request.
 
 The server side lives in the ReviewForest API (`/integrations/shopware/*`). This repository only contains what runs inside the shop.
 

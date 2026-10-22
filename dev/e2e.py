@@ -19,6 +19,8 @@ What it checks, as a buyer and as the merchant would do it:
   7. tree per order: the buyer names the tree on the finish page, shipped adds it, a cancelled order cancels
      it, and the daily run checks the order against the shop and reports back. Locally the run stops in the
      billing code (no Stripe products in the dev database), so it ends "failed: order_rejected".
+  8. the admin page under Extensions > ReviewForest: signed like the admin signs it, framed only by this shop,
+     shows the connection and lists the order of step 7 as a problem; a changed signature opens nothing
 Only standard library; the dockware admin login admin/shopware is the image's default for local shops.
 """
 import argparse
@@ -34,6 +36,8 @@ import urllib.request
 import uuid
 
 MONGO = 'mongodb://localhost:27019/rf_shopware_dev?replicaSet=rs0&directConnection=true'
+# The local ReviewForest API as the browser reaches it (admin page, manifest <admin>).
+API = 'http://localhost:3000'
 CONTAINER = {8067: 'reviewforest-shopware-dev-sw67-1', 8066: 'reviewforest-shopware-dev-sw66-1'}
 results = []
 
@@ -296,6 +300,23 @@ def main():
           record.get('status') == 'planted' or (record.get('status') == 'failed' and record.get('statusReason') == 'order_rejected'), json.dumps(record))
     check('the result of the daily run is written to the order', bool(reported), str(tree_status))
     admin.request('POST', '/api/_action/system-config', {'ReviewForest.config.treePerOrderEnabled': False})
+
+    # 8. admin page (RF-12249): the admin signs the module URL when it opens the page; do the same and load it
+    signed = admin.request('POST', '/api/_action/extension-sdk/sign-uri', {'appName': 'ReviewForest', 'uri': f'{API}/integrations/shopware/admin'})['uri']
+    with urllib.request.urlopen(signed) as response:
+        page_status, policy, page = response.status, response.headers.get('Content-Security-Policy', ''), response.read().decode('utf-8', 'replace')
+    check('the admin page loads for the shop that signed', page_status == 200 and "postMessage('sw-app-loaded'" in page, f'HTTP {page_status}')
+    check('only this shop may frame the admin page', f'frame-ancestors {base}' in policy, policy)
+    check('the admin page shows the connection to the seeded forest', '>Verbunden<' in page or '>Connected<' in page)
+    if record.get('status') == 'failed':
+        check('the admin page lists the order whose tree was not planted', f'#/sw/order/detail/{order_id}/details' in page)
+    tampered = signed[:-1] + ('0' if signed[-1] != '0' else '1')
+    try:
+        urllib.request.urlopen(tampered)
+        tampered_status, tampered_policy = 200, ''
+    except urllib.error.HTTPError as error:
+        tampered_status, tampered_policy = error.code, error.headers.get('Content-Security-Policy', '')
+    check('a changed signature opens nothing', tampered_status == 401 and "frame-ancestors 'none'" in tampered_policy, f'HTTP {tampered_status}')
 
     failed = [name for name, ok in results if not ok]
     print(f"\n{len(results) - len(failed)}/{len(results)} checks passed on {base}")
