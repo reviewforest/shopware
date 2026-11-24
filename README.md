@@ -22,7 +22,7 @@ The server side lives in the ReviewForest API (`/integrations/shopware/*`). This
 | Forest ID | The Bewertungswald that receives this sales channel's invitations. |
 | Test mode: no invitations, no trees | Off by default. For test and staging shops: buyers see the consent question and the tree choice as usual, but no invitation is sent and no tree is ordered, also none already scheduled, and nothing is made up later. Orders show the reason "Test mode: nothing sent" / "Test mode: no tree". |
 | Widget IDs | The part after `reviewforest-app-` in the embed code, or the whole embed code. |
-| When the widgets load | Always (default) or only after consent in the cookie banner (useful for the Forest Widget with Mapbox map or if you prefer cookie-banner gating). In consent mode, the app adds "ReviewForest" (cookie `reviewforest-widgets`, 30 days) to comfort features; Shopware's "Accept all cookies" button should be on. Shop owners with another consent tool call `ReviewForestWidgets.load()` from it. |
+| When the widgets load | Always (default) or only after consent in the cookie banner (required if you use the Review Forest widget with its Mapbox map, or if you prefer cookie-banner gating). In consent mode, the app adds "ReviewForest" (cookie `reviewforest-widgets`, 30 days) to comfort features; Shopware's "Accept all cookies" button should be on. Shop owners with another consent tool call `ReviewForestWidgets.load()` from it. |
 | Send review invitations | Off by default. |
 | Start the delay when / Delay in days | Shipped, paid or completed, or only through your Flow Builder flows; 1 to 60 days (default: shipped, 7). |
 | Style of the email | Formal or friendly. |

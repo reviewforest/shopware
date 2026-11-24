@@ -11,9 +11,9 @@ with apps/api/.env from dev/api.env.example, mongosh on the PATH.
 
 What it checks, as a buyer and as the merchant would do it:
   1. widget placeholders and the loader on home, category, product and cart; none on account pages. By default
-     the loader waits for cookie consent: the page carries a marker instead of the script, and the cookie settings
-     offer "ReviewForest" under comfort features; with "always" the script is in the page and the entry is dropped
-     (Shopware 6.7.14+) or hidden by the storefront script (older versions)
+     ("always") the script is in the page and the cookie entry is dropped (Shopware 6.7.14+) or hidden by the
+     storefront script (older versions); with "after_consent" the page carries a marker instead of the script,
+     and the cookie settings offer "ReviewForest" under comfort features
   2. guest order, consent "yes" through the app's storefront script, stored on the order
   3. delivery shipped -> invitation scheduled with the configured delay, status written to the order
   4. order cancelled -> invitation cancelled

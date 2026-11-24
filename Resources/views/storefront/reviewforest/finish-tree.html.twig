@@ -70,8 +70,8 @@
                             : (rfTrigger == 'completed' ? (rfDe ? 'kurz nach Abschluss der Bestellung' : 'shortly after the order is completed') : (rfDe ? 'kurz nach dem Versand' : 'shortly after shipping'))) %}
                     <p>
                         {{ rfDe
-                            ? 'Wir pflanzen ihn ' ~ rfWhen ~ ' als Dankeschön für Ihre Bestellung. Er erscheint im Bewertungswald von ' ~ rfShopOrDefault ~ ', einer öffentlichen Seite mit allen Bäumen, die ' ~ rfShopSubject ~ ' gepflanzt hat. Wie soll Ihr Baum dort erscheinen?'
-                            : 'We plant it ' ~ rfWhen ~ ' as a thank-you for your order. It appears in the review forest of ' ~ rfShopOrDefault ~ ', a public page with all trees ' ~ rfShopSubject ~ ' has planted. How should your tree appear there?' }}
+                            ? 'Er erscheint ' ~ rfWhen ~ ' als Dankeschön für Ihre Bestellung im Bewertungswald von ' ~ rfShopOrDefault ~ ', einer öffentlichen Seite mit allen Bäumen, die ' ~ rfShopSubject ~ ' pflanzt. Wie soll Ihr Baum dort erscheinen?'
+                            : 'It appears ' ~ rfWhen ~ ' as a thank-you for your order in the review forest of ' ~ rfShopOrDefault ~ ', a public page with all trees ' ~ rfShopSubject ~ ' plants. How should your tree appear there?' }}
                     </p>
                     <div class="form-check">
                         <input class="form-check-input" type="radio" name="treeChoice" value="none" id="reviewforest-tree-none"
