@@ -5,12 +5,12 @@ Shopware app (app system, no PHP in the shop) for Shopware 6.6 and 6.7, includin
 - **Widgets without code:** shows your ReviewForest widgets (floating badge, footer widget, more widget IDs) on every shop page, configurable per sales channel. Checkout and customer account pages stay free of the widget script unless you switch that on.
 - **Optional cookie consent for the widgets:** by default the widgets load directly on every page (ReviewForest V2 widgets set no cookies and load no external fonts). Optionally, you can switch to consent mode so the loader waits until the visitor allows "ReviewForest" under comfort features in Shopware's cookie settings, right away and without a reload.
 - **Review invitations after shipping:** a set number of days after shipping (or payment, or completion) the buyer gets one review invitation, but only if they agreed.
-- **Consent:** either a question with "Yes, please" and "No, thanks" on the order confirmation page, or an unchecked checkbox in the checkout. Answer, time, source and text version are stored on the order.
-- **Sender and replies (0.2.0):** the invitation comes from "<shop name> über ReviewForest" (German orders) or "<shop name> via ReviewForest", sent from noreply-invite@reviewforest.org. Replies go to the shop's email address from Settings > Basic information.
-- **Consent copy (0.2.0):** when an invitation is scheduled, ReviewForest keeps its own copy of the consent record. If the record on the order is changed before sending, the invitation is not sent ("Consent record on the order was changed").
-- **Tree per order (0.2.0):** every order that reaches the chosen state gets a tree in your Bewertungswald, ordered as additional trees once a day or, if you prefer one invoice a month, once a month. An optional monthly limit caps the trees per sales channel. Buyers choose on the order confirmation page whether the tree shows their name, their initials, a dedication or no name. The page links to your Bewertungswald, and a planted order gets the link to its tree ("Link zum Baum"), which you can send to the buyer.
+- **Consent:** either a question with "Yes, please" and "No, thanks" on the order confirmation page, or an unchecked checkbox in the checkout (with automatic fallback to the order confirmation question for express checkouts such as PayPal Express or Apple Pay). Answer, time, source and text version are stored on the order.
+- **Sender and replies:** the invitation comes from "<shop name> über ReviewForest" (German orders) or "<shop name> via ReviewForest", sent from noreply-invite@reviewforest.org. Replies go to the shop's email address from Settings > Basic information.
+- **Consent copy:** when an invitation is scheduled, ReviewForest keeps its own copy of the consent record. If the record on the order is changed before sending, the invitation is not sent ("Consent record on the order was changed").
+- **Tree per order:** every order that reaches the chosen state gets an additional tree in your Bewertungswald, planted once a day on the following day and billed together on your regular ReviewForest subscription invoice (monthly or annual). An optional monthly limit caps the trees per sales channel. On the order confirmation page buyers see the tree notice with a link to your Bewertungswald (and can optionally name their tree with their name, initials or a dedication). A planted order also gets "Link zum Baum" in the admin.
 - **Safety nets:** cancelled, returned or refunded orders cancel the waiting invitation and tree; status, reason and date of both are shown on the order in the admin language; Flow Builder action "Schedule review invitation" for your own rules.
-- **Overview page (0.2.0):** Extensions > ReviewForest shows per sales channel whether the API key and forest ID work, the connected Bewertungswald, what is switched on and the price per additional tree, plus the invitations of the last 30 days, the trees of this month and the latest orders with a problem. The ReviewForest API serves it; Shopware shows it in an iframe and signs the request.
+- **Overview page:** Extensions > ReviewForest shows per sales channel whether the API key, forest ID and configured widget IDs work, the connected Bewertungswald, what is switched on and the price per additional tree, plus the invitations of the last 30 days, the trees of this month and the latest orders with a problem. The ReviewForest API serves it; Shopware shows it in an iframe and signs the request.
 
 The server side lives in the ReviewForest API (`/integrations/shopware/*`). This repository only contains what runs inside the shop.
 
@@ -26,14 +26,13 @@ The server side lives in the ReviewForest API (`/integrations/shopware/*`). This
 | Send review invitations | Off by default. |
 | Start the delay when / Delay in days | Shipped, paid or completed, or only through your Flow Builder flows; 1 to 60 days (default: shipped, 7). |
 | Style of the email | Formal or friendly. |
-| How buyers agree | Question on the order confirmation page (default) or checkbox in the checkout. |
+| How buyers agree | Question on the order confirmation page (default) or checkbox in the checkout (with automatic fallback to the order confirmation question for express checkouts). |
 | Own consent text | Optional, German and English; `{shop}` is replaced by the shop name. |
 | Do not invite these customer groups | For example B2B or marketplace customers. They are not asked for consent; tree per order still applies. |
-| Plant a tree for every order | Off by default. Each tree is an additional tree at your price for additional trees. |
+| Plant a tree for every order | Off by default. Each tree is an additional tree planted on the following day and billed on your regular ReviewForest subscription invoice. |
 | Plant the tree when | Shipped, paid or completed (default: shipped). |
-| Order and bill the trees | Once a day (default; usually one invoice per day with orders) or once a month: the trees of a calendar month (UTC) are ordered together at the start of the next month. |
-| At most this many trees per month | Optional; empty or 0 means no limit. Counted per sales channel, for the calendar month (UTC) in which the trees are ordered. Orders beyond the limit get no tree (reason "Monthly limit reached"). |
-| Let buyers name their tree | Name, initials, a dedication of at most 40 characters, or no name (default: on). |
+| At most this many trees per month | Optional; empty or 0 means no limit. Counted per sales channel per calendar month (UTC). Orders beyond the limit get no tree (reason "Monthly limit reached"). |
+| Let buyers name their tree | Name, initials, a dedication of at most 40 characters, or no name (default: on). When off, buyers still see the tree notice and review forest link. |
 | Occasion shown with the tree | Optional, at most 100 characters (default: "Für eine Bestellung" / "For an order"). |
 
 ## Development

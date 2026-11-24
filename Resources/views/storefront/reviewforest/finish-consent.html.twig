@@ -2,8 +2,9 @@
     Consent on the order confirmation page.
     - Mode "finish_dialog": a question with two equal buttons. Works without JavaScript (plain form post,
       the script endpoint redirects back here); with JavaScript the answer is sent in the background.
-    - Mode "checkout_checkbox": nothing is shown; the JavaScript sends the checkbox answer that was given
-      on the confirm page for this order.
+    - Mode "checkout_checkbox": the JavaScript sends the checkbox answer that was given on the confirm page
+      for this order. If no answer was captured (e.g. PayPal Express / Apple Pay skipped /checkout/confirm or
+      a payment redirect cleared sessionStorage), the script reveals the fallback question here.
     The answer is written to the order custom fields by Resources/scripts/storefront-reviewforest-consent.
     Buyers in a customer group the merchant excluded from invitations are not asked.
 #}
@@ -27,17 +28,29 @@
     {% set rfThanksYes = rfDe ? 'Danke! Sie erhalten einige Tage nach dem Versand eine E-Mail mit der Bitte um Ihre Bewertung.' : 'Thank you! You will receive an email asking for your review a few days after shipping.' %}
     {% set rfThanksNo = rfDe ? 'Alles klar, wir fragen nicht nach einer Bewertung.' : 'All right, we will not ask you for a review.' %}
     {% set rfWithdrawn = (rfOrder.customFields ?? {})['reviewforest_consent_withdrawn_at'] ?? null %}
+    {% set rfOrderItems = [] %}
+    {% if rfOrder.lineItems is defined and rfOrder.lineItems %}
+        {% for rfItem in rfOrder.lineItems %}
+            {% if rfItem.type == 'product' and rfItem.referencedId %}
+                {% set rfOrderItems = rfOrderItems|merge([rfItem.referencedId ~ ':' ~ rfItem.quantity]) %}
+            {% endif %}
+        {% endfor %}
+    {% endif %}
+    {# Computed with Shopware's server clock (matching consent.twig's 7200s window), independent of device clock skew. #}
+    {% set rfFallbackEligible = (('now'|date('U')) - (rfOrder.createdAt|date('U'))) <= 7200 %}
 
-    {# In checkbox mode the card stays hidden until the script has stored the checkbox answer. #}
+    {# In checkbox mode the card stays hidden unless the script stores a "yes" answer or reveals the Express Checkout fallback. #}
     {#
         The order's deep link code (the secret Shopware also uses for guest order links) proves on every request
         that the answer comes from this order's buyer, also when the shop logs guests out after the checkout.
     #}
-    <div class="reviewforest-consent card checkout-card mt-4 mb-4"
+    <div class="reviewforest-consent card checkout-card border mt-4 mb-4"
          {% if rfMode == 'checkout_checkbox' and rfAnswer is null %}hidden{% endif %}
          data-reviewforest-consent
          data-order-created="{{ rfOrder.createdAt|date('U') }}"
          data-order-total="{{ rfOrder.amountTotal }}"
+         data-order-items="{{ rfOrderItems|sort|join(',') }}"
+         data-fallback-eligible="{{ rfFallbackEligible ? '1' : '0' }}"
          data-thanks-yes="{{ rfThanksYes }}"
          data-thanks-no="{{ rfThanksNo }}"
          data-withdrawn="{{ rfDe ? 'Sie haben Ihre Einwilligung widerrufen. Wir fragen nicht nach einer Bewertung.' : 'You withdrew your consent. We will not ask you for a review.' }}"
@@ -59,6 +72,18 @@
                     <input type="hidden" name="orderId" value="{{ rfOrder.id }}">
                     <input type="hidden" name="deepLinkCode" value="{{ rfOrder.deepLinkCode }}">
                     <input type="hidden" name="source" value="checkout_checkbox">
+                </form>
+                <form method="post" action="{{ rfEndpoint }}" hidden data-reviewforest-consent-form data-reviewforest-checkbox-fallback>
+                    <input type="hidden" name="orderId" value="{{ rfOrder.id }}">
+                    <input type="hidden" name="deepLinkCode" value="{{ rfOrder.deepLinkCode }}">
+                    <input type="hidden" name="source" value="finish_dialog">
+                    <input type="hidden" name="redirect" value="1">
+                    <div class="card-title">{{ rfDe ? 'Dürfen wir Sie später um eine Bewertung bitten?' : 'May we ask you for a review later?' }}</div>
+                    <p>{% sw_include '@ReviewForest/storefront/reviewforest/consent-text.html.twig' %}</p>
+                    <div class="reviewforest-consent-actions d-flex flex-wrap gap-2">
+                        <button type="submit" name="consent" value="yes" class="btn btn-outline-primary">{{ rfDe ? 'Ja, gerne' : 'Yes, please' }}</button>
+                        <button type="submit" name="consent" value="no" class="btn btn-outline-primary">{{ rfDe ? 'Nein, danke' : 'No, thanks' }}</button>
+                    </div>
                 </form>
             {% else %}
                 <form method="post" action="{{ rfEndpoint }}" data-reviewforest-consent-form>

@@ -129,7 +129,13 @@
         });
     }
 
-    /* Confirm page, mode "checkbox": remember the answer when the order is submitted. */
+    /*
+     * Confirm page, mode "checkbox": remember the answer immediately (and whenever it changes or the form
+     * submits). Saving on render and on change ensures express/JS payment buttons (PayPal Smart Buttons,
+     * Klarna, Apple Pay) that bypass native form submit still carry the buyer's choice, while buyers who
+     * never visited /checkout/confirm (e.g. PayPal Express from cart) have no stored answer and get the
+     * fallback question on /checkout/finish.
+     */
     function initCheckoutCheckbox(wrapper) {
         var input = wrapper.querySelector('[data-reviewforest-checkbox-input]');
         var orderForm =
@@ -137,31 +143,103 @@
             wrapper.closest('form') ||
             document.querySelector('form[action*="/checkout/order"]');
         var store = storage();
-        if (!input || !orderForm || !store) {
-            // Without the order form no answer can be carried over, so no invitation is sent. Make it visible.
+        if (!input || !store) {
+            // Without storage or input no answer can be carried over; the finish page will show the fallback question.
             if (window.console) {
-                window.console.warn('ReviewForest: order form not found, the consent checkbox cannot be saved.');
+                window.console.warn('ReviewForest: checkout consent checkbox could not be initialized.');
             }
             return;
         }
-        orderForm.addEventListener('submit', function () {
-            store.setItem(
-                STORAGE_KEY,
-                JSON.stringify({
-                    consent: input.checked ? 'yes' : 'no',
-                    at: Date.now(),
-                    // Binds the answer to this checkout: the finish page only uses it for an order with the same
-                    // total that was placed after the answer.
-                    total: wrapper.getAttribute('data-cart-total'),
-                })
-            );
-        });
+        function saveAnswer() {
+            try {
+                store.setItem(
+                    STORAGE_KEY,
+                    JSON.stringify({
+                        consent: input.checked ? 'yes' : 'no',
+                        at: Date.now(),
+                        // Binds the answer to this checkout: the finish page only uses it for an order with the same
+                        // total and product items that was placed after the answer. Leaving /checkout/confirm for any
+                        // regular shop page clears this entry immediately.
+                        total: wrapper.getAttribute('data-cart-total'),
+                        items: wrapper.getAttribute('data-cart-items') || '',
+                    })
+                );
+            } catch {
+                // Storage quota / restricted mode: finish page falls back to the question.
+            }
+        }
+        saveAnswer();
+        input.addEventListener('change', saveAnswer);
+        window.addEventListener('pageshow', saveAnswer);
+        if (orderForm) {
+            orderForm.addEventListener('submit', saveAnswer);
+        }
     }
 
-    /* Finish page, mode "checkbox": store the remembered answer on the order it belongs to. */
+    function clearAbandonedCheckboxAnswer() {
+        var pathname = (window.location && window.location.pathname) || '';
+        // Keep the stored answer only across confirm -> payment/order handoff -> finish; visiting any other shop
+        // page (cart, product, home, account) means the buyer left /checkout/confirm without finishing that order.
+        if (/(?:^|\/)(?:checkout\/(?:confirm|finish|order)|payment\/)/i.test(pathname)) {
+            return;
+        }
+        var store = storage();
+        if (!store) {
+            return;
+        }
+        try {
+            store.removeItem(STORAGE_KEY);
+        } catch {
+            // ignore
+        }
+    }
+
+    function totalsMatch(savedTotal, orderTotal) {
+        var a = savedTotal === null || savedTotal === undefined ? '' : String(savedTotal).trim();
+        var b = orderTotal === null || orderTotal === undefined ? '' : String(orderTotal).trim();
+        if (!a || !b) {
+            return false;
+        }
+        if (a === b) {
+            return true;
+        }
+        var aNum = Number(a);
+        var bNum = Number(b);
+        return Number.isFinite(aNum) && Number.isFinite(bNum) && Math.abs(aNum - bNum) <= 0.015;
+    }
+
+    function itemsMatch(savedItems, orderItems) {
+        var a = savedItems === null || savedItems === undefined ? '' : String(savedItems).trim();
+        var b = orderItems === null || orderItems === undefined ? '' : String(orderItems).trim();
+        return a === b;
+    }
+
+    function revealCheckboxFallback(container, orderCreatedMs) {
+        if (!container) {
+            return;
+        }
+        // Prefer the server-computed eligibility flag (immune to device clock skew); fall back to age check only if absent.
+        var eligibleAttr = container.getAttribute('data-fallback-eligible');
+        if (eligibleAttr === '0') {
+            return;
+        }
+        if (eligibleAttr !== '1' && Number.isFinite(orderCreatedMs) && Date.now() - orderCreatedMs > MAX_AGE_MS) {
+            return;
+        }
+        var fallback = container.querySelector('[data-reviewforest-checkbox-fallback]');
+        if (fallback) {
+            fallback.hidden = false;
+            container.hidden = false;
+        }
+    }
+
+    /* Finish page, mode "checkbox": store the remembered answer on the order it belongs to, or show the fallback question. */
     function submitCheckboxAnswer(form) {
+        var container = form.closest('[data-reviewforest-consent]');
+        var orderCreatedMs = Number(container && container.getAttribute('data-order-created')) * 1000;
         var store = storage();
         if (!store || !window.fetch) {
+            revealCheckboxFallback(container, orderCreatedMs);
             return;
         }
         var saved = null;
@@ -170,9 +248,8 @@
         } catch {
             saved = null;
         }
-        var container = form.closest('[data-reviewforest-consent]');
-        var orderCreatedMs = Number(container && container.getAttribute('data-order-created')) * 1000;
         var orderTotal = container && container.getAttribute('data-order-total');
+        var orderItems = container && container.getAttribute('data-order-items');
         var valid =
             saved &&
             (saved.consent === 'yes' || saved.consent === 'no') &&
@@ -182,13 +259,20 @@
             // the order was placed after the answer (15 minutes tolerance for clock differences) ...
             orderCreatedMs >= saved.at - CLOCK_TOLERANCE_MS &&
             orderCreatedMs - saved.at <= MAX_AGE_MS &&
-            // ... and is the checkout the answer was given in
-            saved.total === orderTotal;
+            // ... and matches the checkout the answer was given in (1-cent rounding tolerance + same product items)
+            totalsMatch(saved.total, orderTotal) &&
+            itemsMatch(saved.items, orderItems);
         if (!valid) {
-            // An answer for another checkout, or an old one, is never used.
+            // Express checkout skipped /checkout/confirm, redirect cleared storage, or answer belonged to another cart:
+            // ask cleanly on the order confirmation page instead of dropping consent silently.
             if (saved && Date.now() - saved.at > MAX_AGE_MS) {
-                store.removeItem(STORAGE_KEY);
+                try {
+                    store.removeItem(STORAGE_KEY);
+                } catch {
+                    // ignore
+                }
             }
+            revealCheckboxFallback(container, orderCreatedMs);
             return;
         }
         postJson(form.getAttribute('action'), {
@@ -198,7 +282,11 @@
             consent: saved.consent,
         })
             .then(function (result) {
-                store.removeItem(STORAGE_KEY);
+                try {
+                    store.removeItem(STORAGE_KEY);
+                } catch {
+                    // ignore
+                }
                 if ((result.consent || saved.consent) === 'yes' && container) {
                     container.hidden = false;
                     showResult(container, 'yes', form, false);
@@ -216,10 +304,21 @@
         var button = form.querySelector('button[type="submit"]');
         var dedication = form.elements.dedication;
         var dedicationChoice = form.querySelector('input[name="treeChoice"][value="dedication"]');
-        if (dedication && dedicationChoice) {
-            // Typing a dedication selects that option.
+        var counter = form.querySelector('[data-reviewforest-tree-counter]');
+        var maxLen = dedication ? Number(dedication.getAttribute('maxlength')) || 40 : 40;
+        function updateCounter() {
+            if (dedication && counter) {
+                counter.textContent = dedication.value.length + ' / ' + maxLen;
+            }
+        }
+        if (dedication) {
+            updateCounter();
             dedication.addEventListener('input', function () {
-                dedicationChoice.checked = true;
+                if (dedicationChoice) {
+                    // Typing a dedication selects that option.
+                    dedicationChoice.checked = true;
+                }
+                updateCounter();
             });
         }
         form.addEventListener('submit', function (event) {
@@ -425,6 +524,10 @@
         var checkboxSubmits = document.querySelectorAll('[data-reviewforest-checkbox-submit]');
         for (var k = 0; k < checkboxSubmits.length; k++) {
             submitCheckboxAnswer(checkboxSubmits[k]);
+        }
+        if (checkboxes.length === 0 && checkboxSubmits.length === 0) {
+            clearAbandonedCheckboxAnswer();
+            window.addEventListener('pageshow', clearAbandonedCheckboxAnswer);
         }
         var treeForms = document.querySelectorAll('[data-reviewforest-tree-form]');
         for (var m = 0; m < treeForms.length; m++) {

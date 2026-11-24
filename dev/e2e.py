@@ -493,6 +493,29 @@ def main():
     admin.request('PATCH', f'/api/order/{planted_id}', {'customFields': {'reviewforest_tree_status': 'planted', 'reviewforest_tree_url': tree_url}})
     _, html = shop.get(f'/checkout/finish?orderId={planted_id}')
     check('the confirmation page of a planted order links to the tree', f'<a href="{tree_url}" target="_blank" rel="noopener">' in html)
+    # Confirm that treeAskName=false still shows the thank-you notice and forest link without the naming form.
+    prev_channel_tree_ask = channel.get('ReviewForest.config.treeAskName')
+    admin.request('POST', f'/api/_action/system-config?salesChannelId={channel_id}', {'ReviewForest.config.treeAskName': False})
+    try:
+        no_name_id, no_name_html = place_guest_order(shop, product['id'], f'e2e-tree-noname-{run}@example.com')
+        check('tree notice and link still show when treeAskName is off',
+              'reviewforest-tree-notice' in no_name_html and 'reviewforest-tree-link' in no_name_html
+              and 'data-reviewforest-tree-form' not in no_name_html)
+    finally:
+        admin.request('POST', f'/api/_action/system-config?salesChannelId={channel_id}',
+                      {'ReviewForest.config.treeAskName': prev_channel_tree_ask})
+
+    # Confirm that checkout_checkbox mode renders the hidden Express Checkout fallback form on finish.
+    prev_channel_consent_mode = channel.get('ReviewForest.config.consentMode')
+    admin.request('POST', f'/api/_action/system-config?salesChannelId={channel_id}', {'ReviewForest.config.consentMode': 'checkout_checkbox'})
+    try:
+        cb_id, cb_html = place_guest_order(shop, product['id'], f'e2e-checkbox-fallback-{run}@example.com')
+        check('checkout_checkbox finish page includes the fallback question for express checkouts',
+              'data-reviewforest-checkbox-submit' in cb_html and 'data-reviewforest-checkbox-fallback' in cb_html)
+    finally:
+        admin.request('POST', f'/api/_action/system-config?salesChannelId={channel_id}',
+                      {'ReviewForest.config.consentMode': prev_channel_consent_mode})
+
     admin.request('POST', '/api/_action/system-config', {'ReviewForest.config.treePerOrderEnabled': False})
 
     # 8. admin page (RF-12249): the admin signs the module URL when it opens the page; do the same and load it

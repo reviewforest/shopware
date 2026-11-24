@@ -15,7 +15,7 @@
         <description lang="de-DE">Zeigt Ihre ReviewForest-Widgets auf allen Seiten und lädt Käufer, die zugestimmt haben, nach dem Versand zu einer Bewertung ein. Ein Baum pro Bewertung, auf Wunsch pro Bestellung.</description>
         <author>ReviewForest GmbH</author>
         <copyright>(c) ReviewForest GmbH</copyright>
-        <version>0.2.0</version>
+        <version>1.0.0</version>
         <icon>Resources/config/plugin.png</icon>
         <license>MIT</license>
         <privacy>https://reviewforest.org/privacy</privacy>
@@ -336,7 +336,7 @@
                     <position>11</position>
                     <options>
                         <option value="pending">
-                            <!-- RF-12250: true for daily and monthly billing (no "daily"). -->
+                            <!-- Planted in the next daily run. -->
                             <name>Planted with the next order of trees</name>
                             <name lang="de-DE">Wird mit der nächsten Baumbestellung gepflanzt</name>
                         </option>
@@ -471,16 +471,15 @@
                             <name lang="de-DE">Abrechnung unklar, ReviewForest prüft</name>
                         </option>
                         <option value="interrupted">
-                            <!-- RF-12250: true for daily and monthly billing (no "daily"). -->
+                            <!-- Tree order interrupted during the daily run. -->
                             <name>Order of the trees interrupted, ReviewForest checks</name>
                             <name lang="de-DE">Baumbestellung unterbrochen, ReviewForest prüft</name>
                         </option>
-                        <!-- RF-12250 tree billing: monthly limit (treeMonthlyLimit in config.xml). -->
+                        <!-- Optional monthly limit (treeMonthlyLimit in config.xml). -->
                         <option value="monthly_limit_reached">
                             <name>Monthly limit reached</name>
                             <name lang="de-DE">Monatsgrenze erreicht</name>
                         </option>
-                        <!-- /RF-12250 tree billing -->
                         <option value="other">
                             <name>Other reason</name>
                             <name lang="de-DE">Anderer Grund</name>
