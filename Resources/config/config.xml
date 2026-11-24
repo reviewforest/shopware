@@ -12,12 +12,27 @@
             <helpText>Create the key in ReviewForest under Integrations, API. Needed for review invitations and tree per order; the widgets work without it.</helpText>
             <helpText lang="de-DE">Den Schlüssel erstellst du in ReviewForest unter Integrationen, API. Nötig für Bewertungseinladungen und Baum pro Bestellung; die Widgets funktionieren auch ohne.</helpText>
         </input-field>
+        <!-- Admin page (RF-12249): the help text says where the connection can be checked. -->
         <input-field type="text">
             <name>forestId</name>
             <label>Forest ID</label>
             <label lang="de-DE">ID des Bewertungswalds</label>
-            <helpText>The ID of the Bewertungswald that receives the invitations and the order trees of this sales channel.</helpText>
-            <helpText lang="de-DE">Die ID des Bewertungswalds, an den die Einladungen und die Bestellbäume dieses Verkaufskanals gehen.</helpText>
+            <helpText>The ID of the Bewertungswald that receives the invitations and the order trees of this sales channel. After saving, Extensions > ReviewForest shows whether API key and forest ID work.</helpText>
+            <helpText lang="de-DE">Die ID des Bewertungswalds, an den die Einladungen und die Bestellbäume dieses Verkaufskanals gehen. Ob API-Schlüssel und ID stimmen, siehst du nach dem Speichern unter Erweiterungen > ReviewForest.</helpText>
+        </input-field>
+    </card>
+
+    <!-- Test mode (RF-12253): read by the ReviewForest API before it schedules, sends or orders anything. -->
+    <card>
+        <title>Test and staging shops</title>
+        <title lang="de-DE">Test- und Staging-Shops</title>
+        <input-field type="bool">
+            <name>testMode</name>
+            <label>Test mode: no invitations, no trees</label>
+            <label lang="de-DE">Testmodus: keine Einladungen, keine Bäume</label>
+            <defaultValue>false</defaultValue>
+            <helpText>For test and staging shops. Buyers still see the consent question and the choice for their tree. While test mode is on, ReviewForest sends no invitations and orders no trees, not even those already scheduled, and makes up none of it later. The order shows the reason "Test mode: nothing sent" or "Test mode: no tree". If consent is missing or the API key is wrong, the order shows that reason as usual. Leave it off in your live shop.</helpText>
+            <helpText lang="de-DE">Für Test- und Staging-Shops. Käufer sehen weiterhin die Frage nach der Einwilligung und die Auswahl für ihren Baum. Solange der Testmodus an ist, verschickt ReviewForest keine Einladungen und bestellt keine Bäume, auch keine bereits geplanten, und holt nichts davon nach. An der Bestellung steht dann als Grund "Testmodus: nichts verschickt" oder "Testmodus: kein Baum". Fehlt die Einwilligung oder stimmt der API-Schlüssel nicht, steht dort wie sonst dieser Grund. Im Live-Shop ausgeschaltet lassen.</helpText>
         </input-field>
     </card>
 
@@ -38,6 +53,32 @@
             <helpText>Off by default, so no external script runs while buyers enter their data. The cart always shows widgets.</helpText>
             <helpText lang="de-DE">Standardmäßig aus, damit kein externes Skript läuft, während Käufer ihre Daten eingeben. Im Warenkorb erscheinen Widgets immer.</helpText>
         </input-field>
+        <!--
+            Widget consent (RF-12254). "always" (default): the loader script is in the page. "after_consent": the page
+            carries only the placeholders and the storefront script loads widgets.reviewforest.org/main.js after consent
+            to the cookie entry "reviewforest-widgets" (manifest.xml). Only the exact value "after_consent" waits for consent.
+        -->
+        <input-field type="single-select">
+            <name>widgetsConsent</name>
+            <label>When the widgets load</label>
+            <label lang="de-DE">Wann die Widgets laden</label>
+            <defaultValue>always</defaultValue>
+            <helpText>Always (default): V2 widgets load directly on every page without setting cookies or loading external fonts; name them in your privacy policy. If you use the Review Forest widget with its Mapbox map, switch to "Only after consent" (Mapbox stores an identifier in the browser). Only after consent: the widgets wait until visitors allow "ReviewForest: reviews and review forest" under comfort features in Shopware's cookie settings (switch on the "Accept all cookies" button under Settings, Basic information).</helpText>
+            <helpText lang="de-DE">Immer (Standard): V2-Widgets laden direkt auf jeder Seite, setzen keine Cookies und laden keine externen Schriftarten; nenne sie in deiner Datenschutzerklärung. Nutzt du das Bewertungswald-Widget mit Mapbox-Karte, stell auf "Erst nach Zustimmung" um (Mapbox speichert eine Kennung im Browser). Erst nach Zustimmung: Die Widgets warten, bis Besucher in den Cookie-Einstellungen unter Komfortfunktionen "ReviewForest: Bewertungen und Bewertungswald" erlauben (schalte dafür unter Einstellungen, Grundeinstellungen den Button "Alle Cookies akzeptieren" ein).</helpText>
+            <options>
+                <option>
+                    <id>always</id>
+                    <name>Always, without asking</name>
+                    <name lang="de-DE">Immer, ohne Nachfrage</name>
+                </option>
+                <option>
+                    <id>after_consent</id>
+                    <name>Only after consent in the cookie banner (comfort features)</name>
+                    <name lang="de-DE">Erst nach Zustimmung im Cookie-Banner (Komfortfunktionen)</name>
+                </option>
+            </options>
+        </input-field>
+        <!-- End of widget consent (RF-12254). -->
         <input-field type="text">
             <name>floatingWidgetId</name>
             <label>Floating badge: widget ID</label>
@@ -133,8 +174,8 @@
             <label>How buyers agree</label>
             <label lang="de-DE">So stimmen Käufer zu</label>
             <defaultValue>finish_dialog</defaultValue>
-            <helpText>Either a question with Yes and No on the order confirmation page, or an unchecked checkbox in the checkout.</helpText>
-            <helpText lang="de-DE">Entweder eine Frage mit Ja und Nein auf der Bestellbestätigungsseite oder eine nicht vorausgewählte Checkbox im Checkout.</helpText>
+            <helpText>Either a question with Yes and No on the order confirmation page, or an unchecked checkbox in the checkout. If an express checkout (such as PayPal Express or Apple Pay) skips the checkout confirmation page, the app falls back to the question on the order confirmation page.</helpText>
+            <helpText lang="de-DE">Entweder eine Frage mit Ja und Nein auf der Bestellbestätigungsseite oder eine nicht vorausgewählte Checkbox im Checkout. Überspringt ein Express-Checkout (z. B. PayPal Express oder Apple Pay) die Kassen-Bestätigungsseite, zeigt die App automatisch die Frage auf der Bestellbestätigungsseite.</helpText>
             <options>
                 <option>
                     <id>finish_dialog</id>
@@ -182,8 +223,8 @@
             <label>Plant a tree for every order</label>
             <label lang="de-DE">Für jede Bestellung einen Baum pflanzen</label>
             <defaultValue>false</defaultValue>
-            <helpText>Costs money: every tree is an additional tree in your Bewertungswald, at your price for additional trees (ReviewForest shows the price per tree when you plant additional trees there). The trees of a day are ordered together once a day, usually one invoice per day with orders. Example: 15 orders a day are about 450 trees a month. Cancelled, returned or refunded orders get no tree. Uses the API key and forest from "Connection".</helpText>
-            <helpText lang="de-DE">Kostet Geld: Jeder Baum ist ein zusätzlicher Baum in deinem Bewertungswald, zu deinem Preis für zusätzliche Bäume (den Preis pro Baum zeigt dir ReviewForest, wenn du dort zusätzliche Bäume pflanzt). Die Bäume eines Tages bestellen wir einmal täglich gesammelt, in der Regel eine Rechnung pro Tag mit Bestellungen. Beispiel: 15 Bestellungen am Tag sind etwa 450 Bäume im Monat. Stornierte, retournierte oder erstattete Bestellungen bekommen keinen Baum. Nutzt den API-Schlüssel und den Bewertungswald aus "Verbindung".</helpText>
+            <helpText>Every tree is planted as an additional tree in your review forest, billed at your additional-tree price on your regular ReviewForest subscription invoice (Extensions > ReviewForest shows your price per tree). Trees are planted once a day on the following day. Cancelled, returned or refunded orders get no tree. Uses the API key and forest from "Connection".</helpText>
+            <helpText lang="de-DE">Für jede Bestellung pflanzt du einen zusätzlichen Baum in deinem Bewertungswald – abgerechnet zu deinem Preis für zusätzliche Bäume gesammelt über deine reguläre ReviewForest-Aborechnung (den Preis pro Baum siehst du unter Erweiterungen > ReviewForest). Die Bäume werden einmal täglich am Folgetag gepflanzt. Stornierte, retournierte oder erstattete Bestellungen bekommen keinen Baum. Nutzt API-Schlüssel und Bewertungswald aus "Verbindung".</helpText>
         </input-field>
         <input-field type="single-select">
             <name>treeTrigger</name>
@@ -208,13 +249,22 @@
                 </option>
             </options>
         </input-field>
+        <!-- Optional monthly limit per sales channel (read by shopwareTreeService). -->
+        <input-field type="int">
+            <name>treeMonthlyLimit</name>
+            <label>At most this many trees per month</label>
+            <label lang="de-DE">Höchstens so viele Bäume pro Monat</label>
+            <min>0</min>
+            <helpText>Optional. Empty or 0: no limit. Applies to each sales channel on its own: in a calendar month (UTC) we plant at most this many trees for its orders. Orders beyond the limit get no tree (reason "Monthly limit reached").</helpText>
+            <helpText lang="de-DE">Optional. Leer oder 0: keine Grenze. Gilt für jeden Verkaufskanal einzeln: In einem Kalendermonat (UTC) pflanzen wir höchstens so viele Bäume für seine Bestellungen. Bestellungen über der Grenze bekommen keinen Baum (Grund "Monatsgrenze erreicht").</helpText>
+        </input-field>
         <input-field type="bool">
             <name>treeAskName</name>
             <label>Let buyers name their tree</label>
             <label lang="de-DE">Käufer dürfen ihren Baum benennen</label>
             <defaultValue>true</defaultValue>
-            <helpText>On the order confirmation page buyers choose: their name, initials only, a dedication or no name. Without an answer the tree has no name.</helpText>
-            <helpText lang="de-DE">Auf der Bestellbestätigung wählen Käufer: ihren Namen, nur Initialen, eine Widmung oder keinen Namen. Ohne Antwort bekommt der Baum keinen Namen.</helpText>
+            <helpText>On the order confirmation page buyers can choose their name, initials, a dedication or no name (without an answer the tree has no name). When off, buyers still see that a tree is planted for their order together with a link to your review forest.</helpText>
+            <helpText lang="de-DE">Auf der Bestellbestätigung wählen Käufer ihren Namen, Initialen, eine Widmung oder keinen Namen (ohne Antwort bleibt der Baum ohne Namen). Wenn aus, sehen Käufer trotzdem den Hinweis auf ihren Baum und den Link zu deinem Bewertungswald.</helpText>
         </input-field>
         <input-field>
             <name>treeOccasion</name>

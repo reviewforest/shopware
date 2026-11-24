@@ -8,7 +8,8 @@
     dedication comes from the buyer; it is cut to one line of at most 40 characters here, and the ReviewForest
     API cleans it again before it orders the tree.
 
-    The choice can change until the daily run has ordered the tree (status "planted").
+    The choice can change until the daily run that orders the tree has planted it (status "planted") on the
+    following day.
 #}
 {% set rfOrderId = hook.request.orderId|default('') %}
 {% set rfDeepLinkCode = hook.request.deepLinkCode|default('') %}

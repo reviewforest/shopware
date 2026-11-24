@@ -1,23 +1,24 @@
 {#
-    Tree per order on the order confirmation page: the buyer chooses how the order's tree appears in the
-    shop's Bewertungswald (with name, initials, a dedication or without a name).
+    Tree per order on the order confirmation page: shows the thank-you notice and link to the shop's
+    Bewertungswald, and (when treeAskName is on) lets the buyer choose how the tree appears (with name,
+    initials, a dedication or without a name).
     Works without JavaScript (plain form post, the script endpoint redirects back here); with JavaScript the
     choice is sent in the background. The choice is written to the order custom fields by
-    Resources/scripts/storefront-reviewforest-tree; the ReviewForest API reads it in the daily run that orders
-    the trees.
+    Resources/scripts/storefront-reviewforest-tree; the ReviewForest API reads it in the daily run that plants
+    the trees on the following day.
 #}
 {% set rfOrder = page.order %}
 {% set rfTreeStatus = (rfOrder.customFields ?? {})['reviewforest_tree_status'] ?? '' %}
 {# Codes since 0.2.0; texts like "planted 2026-10-22" come from test installations before that. #}
 {% set rfTreePlanted = rfTreeStatus == 'planted' or rfTreeStatus starts with 'planted ' %}
 {% set rfTreeNotPlanted = rfTreeStatus == 'not_planted' or rfTreeStatus starts with 'not planted' %}
-{# A cancelled order gets no tree, so the buyer is not asked (and a reload after the cancellation shows nothing). #}
+{# A cancelled order gets no tree, so the buyer is not shown the card (and a reload after the cancellation shows nothing). #}
 {% set rfOrderCancelled = (rfOrder.stateMachineState.technicalName ?? '') == 'cancelled' %}
 {% set rfTreeSetting = config('ReviewForest.config.treePerOrderEnabled') %}
 {% set rfAskName = config('ReviewForest.config.treeAskName') %}
+{% set rfCanName = not (rfAskName is same as(false) or rfAskName is same as('false') or rfAskName is same as('0')) %}
 {% if rfOrder
     and (rfTreeSetting is same as(true) or rfTreeSetting is same as('true') or rfTreeSetting is same as('1'))
-    and not (rfAskName is same as(false) or rfAskName is same as('false') or rfAskName is same as('0'))
     and not rfOrderCancelled
     and not rfTreeNotPlanted %}
     {% if context.languageInfo is defined and context.languageInfo %}
@@ -29,6 +30,12 @@
     {% endif %}
     {% set rfDe = rfLocale|lower starts with 'de' %}
     {% set rfShop = config('core.basicInformation.shopName')|default('')|trim %}
+    {% set rfShopOrDefault = rfShop ?: (rfDe ? 'diesem Shop' : 'this shop') %}
+    {% set rfShopSubject = rfShop ?: (rfDe ? 'dieser Shop' : 'this shop') %}
+    {% set rfTrigger = config('ReviewForest.config.treeTrigger')|default('shipped') %}
+    {% set rfWhen = rfTrigger == 'paid'
+        ? (rfDe ? 'kurz nach Ihrer Zahlung' : 'shortly after your payment')
+        : (rfTrigger == 'completed' ? (rfDe ? 'kurz nach Abschluss der Bestellung' : 'shortly after the order is completed') : (rfDe ? 'kurz nach dem Versand' : 'shortly after shipping')) %}
     {% set rfFirst = rfOrder.orderCustomer.firstName|default('')|trim %}
     {% set rfLast = rfOrder.orderCustomer.lastName|default('')|trim %}
     {% set rfFullName = (rfFirst ~ ' ' ~ rfLast)|trim %}
@@ -39,7 +46,7 @@
     {% set rfSavedAnonymous = rfDe ? 'Gespeichert. Ihr Baum erscheint ohne Namen.' : 'Saved. Your tree will appear without a name.' %}
     {% set rfEndpoint = path('frontend.script_endpoint', { hook: 'reviewforest-tree' }) %}
 
-    <div class="reviewforest-tree card checkout-card mt-4 mb-4"
+    <div class="reviewforest-tree card checkout-card border mt-4 mb-4"
          data-reviewforest-tree
          data-saved-named="{{ rfSavedNamed }}"
          data-saved-anonymous="{{ rfSavedAnonymous }}"
@@ -51,21 +58,15 @@
                     {{ rfDe ? 'Ihr Baum ist gepflanzt.' : 'Your tree has been planted.' }}
                     {% if rfName %}{{ rfDe ? 'Er trägt den Namen:' : 'Its name:' }} {{ rfName }}{% endif %}
                 </p>
-            {% else %}
+            {% elseif rfCanName %}
                 <form method="post" action="{{ rfEndpoint }}" data-reviewforest-tree-form>
                     <input type="hidden" name="orderId" value="{{ rfOrder.id }}">
                     <input type="hidden" name="deepLinkCode" value="{{ rfOrder.deepLinkCode }}">
                     <input type="hidden" name="redirect" value="1">
-                    {% set rfShopOrDefault = rfShop ?: (rfDe ? 'diesem Shop' : 'this shop') %}
-                    {% set rfShopSubject = rfShop ?: (rfDe ? 'dieser Shop' : 'this shop') %}
-                    {% set rfTrigger = config('ReviewForest.config.treeTrigger')|default('shipped') %}
-                    {% set rfWhen = rfTrigger == 'paid'
-                        ? (rfDe ? 'kurz nach Ihrer Zahlung' : 'shortly after your payment')
-                        : (rfTrigger == 'completed' ? (rfDe ? 'kurz nach Abschluss der Bestellung' : 'shortly after the order is completed') : (rfDe ? 'kurz nach dem Versand' : 'shortly after shipping')) %}
                     <p>
                         {{ rfDe
-                            ? 'Wir pflanzen ihn ' ~ rfWhen ~ ', unabhängig von einer Bewertung. Er erscheint im Bewertungswald von ' ~ rfShopOrDefault ~ ', einer öffentlichen Seite mit allen Bäumen, die ' ~ rfShopSubject ~ ' gepflanzt hat. Wie soll Ihr Baum dort erscheinen?'
-                            : 'We plant it ' ~ rfWhen ~ ', whether or not you write a review. It appears in the review forest of ' ~ rfShopOrDefault ~ ', a public page with all trees ' ~ rfShopSubject ~ ' has planted. How should your tree appear there?' }}
+                            ? 'Er erscheint ' ~ rfWhen ~ ' als Dankeschön für Ihre Bestellung im Bewertungswald von ' ~ rfShopOrDefault ~ ', einer öffentlichen Seite mit allen Bäumen, die ' ~ rfShopSubject ~ ' pflanzt. Wie soll Ihr Baum dort erscheinen?'
+                            : 'It appears ' ~ rfWhen ~ ' as a thank-you for your order in the review forest of ' ~ rfShopOrDefault ~ ', a public page with all trees ' ~ rfShopSubject ~ ' plants. How should your tree appear there?' }}
                     </p>
                     <div class="form-check">
                         <input class="form-check-input" type="radio" name="treeChoice" value="none" id="reviewforest-tree-none"
@@ -94,6 +95,9 @@
                                aria-label="{{ rfDe ? 'Widmung' : 'Dedication' }}"
                                placeholder="{{ rfDe ? 'zum Beispiel: Für Oma Erna' : 'for example: For grandma Erna' }}"
                                value="{{ rfChoice == 'dedication' ? rfName : '' }}">
+                        <div class="d-flex justify-content-end mt-1">
+                            <small class="text-muted reviewforest-tree-counter" data-reviewforest-tree-counter aria-live="polite">{{ (rfChoice == 'dedication' ? rfName|length : 0) }} / 40</small>
+                        </div>
                     </div>
                     <p class="text-muted small mt-2">{{ rfDe ? 'Name oder Widmung sind dort öffentlich zu sehen. Ihre Wahl können Sie hier bis zu zwei Stunden nach der Bestellung ändern.' : 'The name or dedication is shown publicly there. You can change your choice here for up to two hours after the order.' }}</p>
                     <div class="d-flex flex-wrap align-items-center gap-2">
@@ -103,6 +107,38 @@
                         </span>
                     </div>
                 </form>
+            {% else %}
+                <p class="reviewforest-tree-notice mb-0">
+                    {{ rfDe
+                        ? 'Er erscheint ' ~ rfWhen ~ ' als Dankeschön für Ihre Bestellung im Bewertungswald von ' ~ rfShopOrDefault ~ '.'
+                        : 'It appears ' ~ rfWhen ~ ' as a thank-you for your order in the review forest of ' ~ rfShopOrDefault ~ '.' }}
+                </p>
+            {% endif %}
+            {#
+                RF-12251: a link to the shop's Bewertungswald, and once the tree is planted to the tree itself.
+                The storefront only knows the forest ID, so the forest link goes through the ReviewForest API, which
+                redirects to the forest page's current address. The buyer's browser opens it, so the development URL is
+                localhost, like the admin page; bin/build.sh puts the release API URL in its place. The tree link is written to the order by ReviewForest when it plants the tree.
+            #}
+            {% set rfForestId = config('ReviewForest.config.forestId')|default('')|trim %}
+            {% set rfPageLang = rfLocale|lower|slice(0, 2) %}
+            {% set rfForestUrl = rfForestId matches '/^[0-9a-fA-F]{24}$/'
+                ? 'http://localhost:3000/integrations/shopware/forest-page/' ~ rfForestId ~ (rfPageLang in ['de', 'en', 'fr'] ? '?lang=' ~ rfPageLang : '')
+                : '' %}
+            {% set rfTreeUrl = (rfOrder.customFields ?? {})['reviewforest_tree_url'] ?? '' %}
+            {% set rfTreeLink = rfTreePlanted and (rfTreeUrl starts with 'https://' or rfTreeUrl starts with 'http://') %}
+            {% set rfLinkUrl = rfTreeLink ? rfTreeUrl : rfForestUrl %}
+            {% if rfTreeLink %}
+                {% set rfLinkText = rfDe ? 'Ihren Baum im Bewertungswald ansehen' : 'View your tree in the review forest' %}
+            {% elseif rfShop %}
+                {% set rfLinkText = rfDe ? 'Zum Bewertungswald von ' ~ rfShop : 'View the review forest of ' ~ rfShop %}
+            {% else %}
+                {% set rfLinkText = rfDe ? 'Zum Bewertungswald dieses Shops' : "View this shop's review forest" %}
+            {% endif %}
+            {% if rfLinkUrl %}
+                <p class="reviewforest-tree-link mt-3 mb-0">
+                    <a href="{{ rfLinkUrl }}" target="_blank" rel="noopener">{{ rfLinkText }}<span class="visually-hidden"> {{ rfDe ? '(öffnet in einem neuen Tab)' : '(opens in a new tab)' }}</span></a>
+                </p>
             {% endif %}
         </div>
     </div>

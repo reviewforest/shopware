@@ -1,4 +1,5 @@
 {# Footer widget, used by the normal and the minimal (checkout) footer. #}
+{# Only the placeholder: widgets.html.twig decides whether the loader comes right away or after cookie consent. #}
 {# No third-party widget script on checkout and account pages unless the merchant enables it; the cart counts as a shop page. #}
 {% set rfRoute = app.request.attributes.get('_route')|default('') %}
 {% set rfSensitivePage = (rfRoute starts with 'frontend.checkout.' and rfRoute != 'frontend.checkout.cart.page') or rfRoute starts with 'frontend.account.' %}

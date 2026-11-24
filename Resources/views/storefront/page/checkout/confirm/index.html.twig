@@ -10,7 +10,18 @@
     {% set rfGroupExcluded = context.currentCustomerGroup.id in (config('ReviewForest.config.excludedCustomerGroups')|default([])) %}
     {% set rfInvitations = config('ReviewForest.config.invitationsEnabled') %}
     {% if (rfInvitations is same as(true) or rfInvitations is same as('true') or rfInvitations is same as('1')) and config('ReviewForest.config.consentMode') == 'checkout_checkbox' and not rfGroupExcluded %}
-        <div class="reviewforest-consent-checkbox form-check mb-4" data-reviewforest-checkbox data-cart-total="{{ page.cart.price.totalPrice }}">
+        {% set rfCartItems = [] %}
+        {% if page.cart.lineItems is defined and page.cart.lineItems %}
+            {% for rfItem in page.cart.lineItems %}
+                {% if rfItem.type == 'product' and rfItem.referencedId %}
+                    {% set rfCartItems = rfCartItems|merge([rfItem.referencedId ~ ':' ~ rfItem.quantity]) %}
+                {% endif %}
+            {% endfor %}
+        {% endif %}
+        <div class="reviewforest-consent-checkbox form-check mb-4"
+             data-reviewforest-checkbox
+             data-cart-total="{{ page.cart.price.totalPrice }}"
+             data-cart-items="{{ rfCartItems|sort|join(',') }}">
             <input type="checkbox" class="form-check-input" id="reviewforestConsentCheckbox" data-reviewforest-checkbox-input>
             <label class="form-check-label" for="reviewforestConsentCheckbox">
                 {% sw_include '@ReviewForest/storefront/reviewforest/consent-text.html.twig' %}
