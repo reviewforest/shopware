@@ -31,7 +31,7 @@
     {% set rfOrderItems = [] %}
     {% if rfOrder.lineItems is defined and rfOrder.lineItems %}
         {% for rfItem in rfOrder.lineItems %}
-            {% if rfItem.type == 'product' and rfItem.referencedId %}
+            {% if rfItem.type == 'product' and rfItem.referencedId and not rfItem.parentId %}
                 {% set rfOrderItems = rfOrderItems|merge([rfItem.referencedId ~ ':' ~ rfItem.quantity]) %}
             {% endif %}
         {% endfor %}
