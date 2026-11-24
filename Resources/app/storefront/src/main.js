@@ -24,17 +24,24 @@
     }
 
     function postJson(action, payload) {
-        return window.fetch(action, {
-            method: 'POST',
-            credentials: 'same-origin',
-            headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-            body: JSON.stringify(payload),
-        }).then(function (response) {
-            if (!response.ok) {
-                throw new Error('ReviewForest request failed with ' + response.status);
-            }
-            return response.json();
-        });
+        return window
+            .fetch(action, {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Accept: 'application/json',
+                },
+                body: JSON.stringify(payload),
+            })
+            .then(function (response) {
+                if (!response.ok) {
+                    throw new Error(
+                        'ReviewForest request failed with ' + response.status
+                    );
+                }
+                return response.json();
+            });
     }
 
     function clear(element) {
@@ -67,7 +74,11 @@
         result.textContent = text;
         clear(body);
 
-        if (consent !== 'yes' || !answeredForm || !answeredForm.elements.deepLinkCode) {
+        if (
+            consent !== 'yes' ||
+            !answeredForm ||
+            !answeredForm.elements.deepLinkCode
+        ) {
             body.appendChild(result);
             return;
         }
@@ -76,8 +87,15 @@
         form.action = answeredForm.getAttribute('action');
         form.className = 'd-flex flex-wrap align-items-center gap-2';
         form.setAttribute('data-reviewforest-consent-form', '');
-        form.appendChild(hiddenInput('orderId', answeredForm.elements.orderId.value));
-        form.appendChild(hiddenInput('deepLinkCode', answeredForm.elements.deepLinkCode.value));
+        form.appendChild(
+            hiddenInput('orderId', answeredForm.elements.orderId.value)
+        );
+        form.appendChild(
+            hiddenInput(
+                'deepLinkCode',
+                answeredForm.elements.deepLinkCode.value
+            )
+        );
         form.appendChild(hiddenInput('source', 'withdrawal'));
         form.appendChild(hiddenInput('redirect', '1'));
         form.appendChild(result);
@@ -114,7 +132,13 @@
             })
                 .then(function (result) {
                     var answer = result.consent || consent;
-                    showResult(container, answer, form, form.elements.source.value === 'withdrawal' && answer === 'no');
+                    showResult(
+                        container,
+                        answer,
+                        form,
+                        form.elements.source.value === 'withdrawal' &&
+                            answer === 'no'
+                    );
                 })
                 .catch(function () {
                     // Let the server handle it the classic way. form.submit() drops the clicked button,
@@ -146,7 +170,9 @@
         if (!input || !store) {
             // Without storage or input no answer can be carried over; the finish page will show the fallback question.
             if (window.console) {
-                window.console.warn('ReviewForest: checkout consent checkbox could not be initialized.');
+                window.console.warn(
+                    'ReviewForest: checkout consent checkbox could not be initialized.'
+                );
             }
             return;
         }
@@ -180,7 +206,11 @@
         var pathname = (window.location && window.location.pathname) || '';
         // Keep the stored answer only across confirm -> payment/order handoff -> finish; visiting any other shop
         // page (cart, product, home, account) means the buyer left /checkout/confirm without finishing that order.
-        if (/(?:^|\/)(?:checkout\/(?:confirm|finish|order)|payment\/)/i.test(pathname)) {
+        if (
+            /(?:^|\/)(?:checkout\/(?:confirm|finish|order)|payment\/)/i.test(
+                pathname
+            )
+        ) {
             return;
         }
         var store = storage();
@@ -195,8 +225,14 @@
     }
 
     function totalsMatch(savedTotal, orderTotal) {
-        var a = savedTotal === null || savedTotal === undefined ? '' : String(savedTotal).trim();
-        var b = orderTotal === null || orderTotal === undefined ? '' : String(orderTotal).trim();
+        var a =
+            savedTotal === null || savedTotal === undefined
+                ? ''
+                : String(savedTotal).trim();
+        var b =
+            orderTotal === null || orderTotal === undefined
+                ? ''
+                : String(orderTotal).trim();
         if (!a || !b) {
             return false;
         }
@@ -205,12 +241,22 @@
         }
         var aNum = Number(a);
         var bNum = Number(b);
-        return Number.isFinite(aNum) && Number.isFinite(bNum) && Math.abs(aNum - bNum) <= 0.015;
+        return (
+            Number.isFinite(aNum) &&
+            Number.isFinite(bNum) &&
+            Math.abs(aNum - bNum) <= 0.015
+        );
     }
 
     function itemsMatch(savedItems, orderItems) {
-        var a = savedItems === null || savedItems === undefined ? '' : String(savedItems).trim();
-        var b = orderItems === null || orderItems === undefined ? '' : String(orderItems).trim();
+        var a =
+            savedItems === null || savedItems === undefined
+                ? ''
+                : String(savedItems).trim();
+        var b =
+            orderItems === null || orderItems === undefined
+                ? ''
+                : String(orderItems).trim();
         return a === b;
     }
 
@@ -223,10 +269,16 @@
         if (eligibleAttr === '0') {
             return;
         }
-        if (eligibleAttr !== '1' && Number.isFinite(orderCreatedMs) && Date.now() - orderCreatedMs > MAX_AGE_MS) {
+        if (
+            eligibleAttr !== '1' &&
+            Number.isFinite(orderCreatedMs) &&
+            Date.now() - orderCreatedMs > MAX_AGE_MS
+        ) {
             return;
         }
-        var fallback = container.querySelector('[data-reviewforest-checkbox-fallback]');
+        var fallback = container.querySelector(
+            '[data-reviewforest-checkbox-fallback]'
+        );
         if (fallback) {
             fallback.hidden = false;
             container.hidden = false;
@@ -236,7 +288,9 @@
     /* Finish page, mode "checkbox": store the remembered answer on the order it belongs to, or show the fallback question. */
     function submitCheckboxAnswer(form) {
         var container = form.closest('[data-reviewforest-consent]');
-        var orderCreatedMs = Number(container && container.getAttribute('data-order-created')) * 1000;
+        var orderCreatedMs =
+            Number(container && container.getAttribute('data-order-created')) *
+            1000;
         var store = storage();
         if (!store || !window.fetch) {
             revealCheckboxFallback(container, orderCreatedMs);
@@ -248,8 +302,10 @@
         } catch {
             saved = null;
         }
-        var orderTotal = container && container.getAttribute('data-order-total');
-        var orderItems = container && container.getAttribute('data-order-items');
+        var orderTotal =
+            container && container.getAttribute('data-order-total');
+        var orderItems =
+            container && container.getAttribute('data-order-items');
         var valid =
             saved &&
             (saved.consent === 'yes' || saved.consent === 'no') &&
@@ -303,9 +359,13 @@
         var result = form.querySelector('.reviewforest-tree-result');
         var button = form.querySelector('button[type="submit"]');
         var dedication = form.elements.dedication;
-        var dedicationChoice = form.querySelector('input[name="treeChoice"][value="dedication"]');
+        var dedicationChoice = form.querySelector(
+            'input[name="treeChoice"][value="dedication"]'
+        );
         var counter = form.querySelector('[data-reviewforest-tree-counter]');
-        var maxLen = dedication ? Number(dedication.getAttribute('maxlength')) || 40 : 40;
+        var maxLen = dedication
+            ? Number(dedication.getAttribute('maxlength')) || 40
+            : 40;
         function updateCounter() {
             if (dedication && counter) {
                 counter.textContent = dedication.value.length + ' / ' + maxLen;
@@ -326,7 +386,9 @@
                 return;
             }
             event.preventDefault();
-            var checked = form.querySelector('input[name="treeChoice"]:checked');
+            var checked = form.querySelector(
+                'input[name="treeChoice"]:checked'
+            );
             if (button) {
                 button.disabled = true;
             }
@@ -338,7 +400,9 @@
             })
                 .then(function (answer) {
                     result.textContent = answer.name
-                        ? container.getAttribute('data-saved-named') + ' ' + answer.name
+                        ? container.getAttribute('data-saved-named') +
+                          ' ' +
+                          answer.name
                         : container.getAttribute('data-saved-anonymous');
                 })
                 .catch(function () {
@@ -369,7 +433,10 @@
         var cookies = document.cookie ? document.cookie.split(';') : [];
         for (var i = 0; i < cookies.length; i++) {
             var cookie = cookies[i].trim();
-            if (cookie.indexOf(name + '=') === 0 && cookie.length > name.length + 1) {
+            if (
+                cookie.indexOf(name + '=') === 0 &&
+                cookie.length > name.length + 1
+            ) {
                 return true;
             }
         }
@@ -383,7 +450,10 @@
         // An embed code of the merchant (for example in a Shopping Experience) may bring its own loader.
         var scripts = document.getElementsByTagName('script');
         for (var i = 0; i < scripts.length; i++) {
-            if (scripts[i].src && scripts[i].src.indexOf(WIDGET_LOADER_URL) === 0) {
+            if (
+                scripts[i].src &&
+                scripts[i].src.indexOf(WIDGET_LOADER_URL) === 0
+            ) {
                 return true;
             }
         }
@@ -391,7 +461,10 @@
     }
 
     function loadWidgets() {
-        if (loaderPresent() || !document.querySelector(WIDGET_PLACEHOLDER_SELECTOR)) {
+        if (
+            loaderPresent() ||
+            !document.querySelector(WIDGET_PLACEHOLDER_SELECTOR)
+        ) {
             return; // already loaded, or no widget on this page
         }
         widgetLoaderAdded = true;
@@ -415,7 +488,9 @@
             return;
         }
         hiddenWidgets = [];
-        var placeholders = document.querySelectorAll(WIDGET_PLACEHOLDER_SELECTOR);
+        var placeholders = document.querySelectorAll(
+            WIDGET_PLACEHOLDER_SELECTOR
+        );
         for (var i = 0; i < placeholders.length; i++) {
             var style = placeholders[i].style;
             hiddenWidgets.push({
@@ -434,7 +509,11 @@
         for (var i = 0; i < hiddenWidgets.length; i++) {
             var entry = hiddenWidgets[i];
             if (entry.display) {
-                entry.element.style.setProperty('display', entry.display, entry.priority);
+                entry.element.style.setProperty(
+                    'display',
+                    entry.display,
+                    entry.priority
+                );
             } else {
                 entry.element.style.removeProperty('display');
             }
@@ -443,21 +522,27 @@
     }
 
     function initWidgetConsent() {
-        document.addEventListener(COOKIE_CONFIGURATION_UPDATE, function (event) {
-            var updated = event && event.detail;
-            if (!updated || typeof updated[WIDGET_CONSENT_COOKIE] !== 'boolean') {
-                return; // other cookies changed
+        document.addEventListener(
+            COOKIE_CONFIGURATION_UPDATE,
+            function (event) {
+                var updated = event && event.detail;
+                if (
+                    !updated ||
+                    typeof updated[WIDGET_CONSENT_COOKIE] !== 'boolean'
+                ) {
+                    return; // other cookies changed
+                }
+                if (updated[WIDGET_CONSENT_COOKIE]) {
+                    showWidgets();
+                    loadWidgets();
+                } else if (loaderPresent()) {
+                    // Only after the widgets were loaded. Shopware also reports "false" for entries that were never
+                    // allowed (button "Only technically required", or a new consent round after a change of the cookie
+                    // configuration); then nothing changes, so consent given later on the same page still loads them.
+                    hideWidgets();
+                }
             }
-            if (updated[WIDGET_CONSENT_COOKIE]) {
-                showWidgets();
-                loadWidgets();
-            } else if (loaderPresent()) {
-                // Only after the widgets were loaded. Shopware also reports "false" for entries that were never
-                // allowed (button "Only technically required", or a new consent round after a change of the cookie
-                // configuration); then nothing changes, so consent given later on the same page still loads them.
-                hideWidgets();
-            }
-        });
+        );
         // For consent tools that replace Shopware's cookie banner: call ReviewForestWidgets.load() after consent.
         window.ReviewForestWidgets = { load: loadWidgets };
         if (hasCookie(WIDGET_CONSENT_COOKIE)) {
@@ -478,12 +563,16 @@
     function hideUnusedCookieEntry() {
         var selector = 'input[data-cookie="' + WIDGET_CONSENT_COOKIE + '"]';
         function hideIn(root) {
-            var inputs = Array.prototype.slice.call(root.querySelectorAll(selector));
+            var inputs = Array.prototype.slice.call(
+                root.querySelectorAll(selector)
+            );
             if (root.matches && root.matches(selector)) {
                 inputs.push(root);
             }
             for (var i = 0; i < inputs.length; i++) {
-                var entry = inputs[i].closest('.offcanvas-cookie-entry') || inputs[i].parentElement;
+                var entry =
+                    inputs[i].closest('.offcanvas-cookie-entry') ||
+                    inputs[i].parentElement;
                 if (entry) {
                     entry.style.display = 'none';
                 }
@@ -513,15 +602,21 @@
         if (document.querySelector('[data-reviewforest-cookie-entry-unused]')) {
             hideUnusedCookieEntry();
         }
-        var forms = document.querySelectorAll('[data-reviewforest-consent-form]');
+        var forms = document.querySelectorAll(
+            '[data-reviewforest-consent-form]'
+        );
         for (var i = 0; i < forms.length; i++) {
             initFinishDialog(forms[i]);
         }
-        var checkboxes = document.querySelectorAll('[data-reviewforest-checkbox]');
+        var checkboxes = document.querySelectorAll(
+            '[data-reviewforest-checkbox]'
+        );
         for (var j = 0; j < checkboxes.length; j++) {
             initCheckoutCheckbox(checkboxes[j]);
         }
-        var checkboxSubmits = document.querySelectorAll('[data-reviewforest-checkbox-submit]');
+        var checkboxSubmits = document.querySelectorAll(
+            '[data-reviewforest-checkbox-submit]'
+        );
         for (var k = 0; k < checkboxSubmits.length; k++) {
             submitCheckboxAnswer(checkboxSubmits[k]);
         }
@@ -529,7 +624,9 @@
             clearAbandonedCheckboxAnswer();
             window.addEventListener('pageshow', clearAbandonedCheckboxAnswer);
         }
-        var treeForms = document.querySelectorAll('[data-reviewforest-tree-form]');
+        var treeForms = document.querySelectorAll(
+            '[data-reviewforest-tree-form]'
+        );
         for (var m = 0; m < treeForms.length; m++) {
             initTreeForm(treeForms[m]);
         }
