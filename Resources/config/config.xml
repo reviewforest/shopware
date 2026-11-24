@@ -54,27 +54,27 @@
             <helpText lang="de-DE">Standardmäßig aus, damit kein externes Skript läuft, während Käufer ihre Daten eingeben. Im Warenkorb erscheinen Widgets immer.</helpText>
         </input-field>
         <!--
-            Widget consent (RF-12254). "after_consent": the page carries only the placeholders, the storefront script
-            loads widgets.reviewforest.org/main.js after consent to the cookie entry "reviewforest-widgets"
-            (manifest.xml). "always": the loader script is in the page. Only the exact value "always" skips consent.
+            Widget consent (RF-12254). "always" (default): the loader script is in the page. "after_consent": the page
+            carries only the placeholders and the storefront script loads widgets.reviewforest.org/main.js after consent
+            to the cookie entry "reviewforest-widgets" (manifest.xml). Only the exact value "after_consent" waits for consent.
         -->
         <input-field type="single-select">
             <name>widgetsConsent</name>
             <label>When the widgets load</label>
             <label lang="de-DE">Wann die Widgets laden</label>
-            <defaultValue>after_consent</defaultValue>
-            <helpText>Only after consent (default): the widgets appear only for visitors who allow "ReviewForest: reviews and review forest" under comfort features in the cookie settings. Until then your shop loads nothing from ReviewForest. Switch on the "Accept all cookies" button under Settings, Basic information, otherwise only visitors who open the cookie settings can agree. Always: the widgets load on every page without asking; name them in your privacy policy. What applies to your shop is best clarified with your legal adviser.</helpText>
-            <helpText lang="de-DE">Erst nach Zustimmung (Standard): Die Widgets erscheinen nur bei Besuchern, die in den Cookie-Einstellungen unter Komfortfunktionen "ReviewForest: Bewertungen und Bewertungswald" erlauben. Vorher lädt dein Shop nichts von ReviewForest. Schalte dafür unter Einstellungen, Grundeinstellungen den "Alle Cookies akzeptieren"-Button ein, sonst stimmen nur Besucher zu, die die Cookie-Einstellungen öffnen. Immer: Die Widgets laden auf jeder Seite ohne Nachfrage; nenne sie dann in deiner Datenschutzerklärung. Was für deinen Shop gilt, klärst du am besten mit deiner Rechtsberatung.</helpText>
+            <defaultValue>always</defaultValue>
+            <helpText>Always (default): the widgets load directly on every page. ReviewForest V2 widgets set no cookies and load no external fonts; name them in your privacy policy. Only after consent: the widgets wait until visitors allow "ReviewForest: reviews and review forest" under comfort features in Shopware's cookie settings (useful for the Forest Widget with its Mapbox map or if you prefer controlling widgets via the cookie banner; switch on the "Accept all cookies" button under Settings, Basic information).</helpText>
+            <helpText lang="de-DE">Immer (Standard): Die Widgets laden direkt auf jeder Seite. ReviewForest-V2-Widgets setzen keine Cookies und laden keine externen Schriftarten; nenne sie in deiner Datenschutzerklärung. Erst nach Zustimmung: Die Widgets warten, bis Besucher in den Cookie-Einstellungen unter Komfortfunktionen "ReviewForest: Bewertungen und Bewertungswald" erlauben (sinnvoll beim Forest-Widget mit Mapbox-Karte oder wenn du Widgets über den Cookie-Banner steuern möchtest; schalte dafür unter Einstellungen, Grundeinstellungen den Button "Alle Cookies akzeptieren" ein).</helpText>
             <options>
-                <option>
-                    <id>after_consent</id>
-                    <name>Only after consent in the cookie banner (comfort features)</name>
-                    <name lang="de-DE">Erst nach Zustimmung im Cookie-Banner (Komfortfunktionen)</name>
-                </option>
                 <option>
                     <id>always</id>
                     <name>Always, without asking</name>
                     <name lang="de-DE">Immer, ohne Nachfrage</name>
+                </option>
+                <option>
+                    <id>after_consent</id>
+                    <name>Only after consent in the cookie banner (comfort features)</name>
+                    <name lang="de-DE">Erst nach Zustimmung im Cookie-Banner (Komfortfunktionen)</name>
                 </option>
             </options>
         </input-field>
@@ -223,8 +223,8 @@
             <label>Plant a tree for every order</label>
             <label lang="de-DE">Für jede Bestellung einen Baum pflanzen</label>
             <defaultValue>false</defaultValue>
-            <helpText>Costs money: every tree is an additional tree in your Bewertungswald, at your price for additional trees (ReviewForest shows the price per tree when you plant additional trees there). The trees are ordered together, as set under "Order and bill the trees": once a day (usually one invoice per day with orders) or once a month (usually one invoice at the start of the next month). Example: 15 orders a day are about 450 trees a month; "At most this many trees per month" sets a limit. Cancelled, returned or refunded orders get no tree. Uses the API key and forest from "Connection".</helpText>
-            <helpText lang="de-DE">Kostet Geld: Jeder Baum ist ein zusätzlicher Baum in deinem Bewertungswald, zu deinem Preis für zusätzliche Bäume (den Preis pro Baum zeigt dir ReviewForest, wenn du dort zusätzliche Bäume pflanzt). Wir bestellen die Bäume gesammelt, so wie unter "Bäume bestellen und abrechnen" eingestellt: einmal täglich (in der Regel eine Rechnung pro Tag mit Bestellungen) oder einmal im Monat (in der Regel eine Rechnung zu Beginn des nächsten Monats). Beispiel: 15 Bestellungen am Tag sind etwa 450 Bäume im Monat; mit "Höchstens so viele Bäume pro Monat" setzt du eine Grenze. Stornierte, retournierte oder erstattete Bestellungen bekommen keinen Baum. Nutzt den API-Schlüssel und den Bewertungswald aus "Verbindung".</helpText>
+            <helpText>Every tree is an additional tree in your Bewertungswald, billed at your additional-tree price (ReviewForest shows the price per tree when you plant additional trees there). The trees are ordered together, as set under "Order and bill the trees": once a day (usually one invoice per day with orders) or once a month (usually one invoice at the start of the next month). Example: 15 orders a day are about 450 trees a month; "At most this many trees per month" sets a limit. Cancelled, returned or refunded orders get no tree. Uses the API key and forest from "Connection".</helpText>
+            <helpText lang="de-DE">Jeder Baum ist ein zusätzlicher Baum in deinem Bewertungswald, zu deinem Preis für zusätzliche Bäume (den Preis pro Baum zeigt dir ReviewForest, wenn du dort zusätzliche Bäume pflanzt). Wir bestellen die Bäume gesammelt, so wie unter "Bäume bestellen und abrechnen" eingestellt: einmal täglich (in der Regel eine Rechnung pro Tag mit Bestellungen) oder einmal im Monat (in der Regel eine Rechnung zu Beginn des nächsten Monats). Beispiel: 15 Bestellungen am Tag sind etwa 450 Bäume im Monat; mit "Höchstens so viele Bäume pro Monat" setzt du eine Grenze. Stornierte, retournierte oder erstattete Bestellungen bekommen keinen Baum. Nutzt den API-Schlüssel und den Bewertungswald aus "Verbindung".</helpText>
         </input-field>
         <input-field type="single-select">
             <name>treeTrigger</name>

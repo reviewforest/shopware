@@ -66,7 +66,7 @@
                     <input type="hidden" name="deepLinkCode" value="{{ rfOrder.deepLinkCode }}">
                     <input type="hidden" name="source" value="finish_dialog">
                     <input type="hidden" name="redirect" value="1">
-                    <div class="card-title">{{ rfDe ? 'Dürfen wir Sie später um eine Bewertung bitten?' : 'May we ask you for a review later?' }}</div>
+                    <div class="card-title">{{ rfDe ? 'Für Ihre Bewertung pflanzen wir einen Baum: Dürfen wir Sie später einladen?' : 'We plant a tree for your review: may we invite you later?' }}</div>
                     <p>{% sw_include '@ReviewForest/storefront/reviewforest/consent-text.html.twig' %}</p>
                     <div class="reviewforest-consent-actions d-flex flex-wrap gap-2">
                         <button type="submit" name="consent" value="yes" class="btn btn-outline-primary">{{ rfDe ? 'Ja, gerne' : 'Yes, please' }}</button>

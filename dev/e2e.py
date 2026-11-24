@@ -283,8 +283,8 @@ def main():
     product = admin.search('product', {'filter': [{'type': 'equals', 'field': 'parentId', 'value': None}], 'limit': 1})[0]
     category = admin.search('category', {'filter': [{'type': 'equals', 'field': 'level', 'value': 2}], 'limit': 1})[0]
 
-    # 1. widgets; by default the loader waits for cookie consent (RF-12254), only "always" puts it into the page
-    consent_mode = config.get('ReviewForest.config.widgetsConsent') != 'always'
+    # 1. widgets; by default the loader runs directly ("always"), only "after_consent" waits for cookie consent (RF-12254)
+    consent_mode = config.get('ReviewForest.config.widgetsConsent') == 'after_consent'
     for label, page in [('home', '/'), ('category', f"/navigation/{category['id']}"), ('product', f"/detail/{product['id']}"), ('cart', '/checkout/cart')]:
         _, html = shop.get(page)
         if consent_mode:

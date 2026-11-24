@@ -4,10 +4,11 @@
     so a typo in the configuration can never inject markup. The footer widget is rendered by
     layout/footer/footer.html.twig.
 
-    Cookie consent (setting widgetsConsent, RF-12254): by default the page only carries the placeholders and a
-    hidden marker. The app's storefront script (Resources/app/storefront/src/main.js) adds the ReviewForest loader
-    once the visitor allowed "ReviewForest" in Shopware's cookie settings (comfort features). Only the exact value
-    "always" writes the loader script into the page, so an empty or unknown value waits for consent.
+    Cookie consent (setting widgetsConsent, RF-12254): by default ("always") the loader script is written directly
+    into the page whenever at least one widget is configured. Only the exact value "after_consent" switches to
+    consent mode: then the page carries only the placeholders and a hidden marker, and the app's storefront script
+    (Resources/app/storefront/src/main.js) adds the ReviewForest loader once the visitor allowed "ReviewForest" in
+    Shopware's cookie settings (comfort features).
 #}
 {% set rfWidgetIds = [] %}
 {# No third-party widget script on checkout and account pages unless the merchant enables it; the cart counts as a shop page. #}
@@ -17,7 +18,7 @@
 {% set rfOnSensitive = config('ReviewForest.config.widgetsOnCheckoutAndAccount') %}
 {% set rfWidgetsSetting = config('ReviewForest.config.widgetsEnabled') %}
 {% set rfWidgetsOn = not (rfWidgetsSetting is same as(false) or rfWidgetsSetting is same as('false') or rfWidgetsSetting is same as('0')) %}
-{% set rfLoadAlways = config('ReviewForest.config.widgetsConsent') is same as('always') %}
+{% set rfLoadAlways = not (config('ReviewForest.config.widgetsConsent') is same as('after_consent')) %}
 {% set rfWidgetPageAllowed = not rfSensitivePage or (rfOnSensitive is same as(true) or rfOnSensitive is same as('true') or rfOnSensitive is same as('1')) %}
 {% if rfWidgetsOn and rfWidgetPageAllowed %}
     {% set rfCandidates = [config('ReviewForest.config.floatingWidgetId')|default('')]|merge(config('ReviewForest.config.additionalWidgetIds')|default('')|split(',')) %}
